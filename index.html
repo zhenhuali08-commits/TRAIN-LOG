@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#f4f5f7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="TRAIN LOG" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>TRAIN LOG</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./assets/icon-180.png" />
+  <link rel="icon" href="./assets/icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="brand">TRAIN LOG</div>
+        <div id="topbar-subtitle" class="topbar-subtitle">私人训练日志</div>
+      </div>
+
+    </header>
+
+    <main id="main" class="main-content" aria-live="polite"></main>
+
+    <nav class="bottom-nav" aria-label="主导航">
+      <button class="nav-item active" data-page="home"><span>⌂</span><small>首页</small></button>
+      <button class="nav-item" data-page="training"><span>◉</span><small>训练</small></button>
+      <button class="nav-item" data-page="exercises"><span>▦</span><small>动作</small></button>
+      <button class="nav-item" data-page="history"><span>◷</span><small>历史</small></button>
+      <button class="nav-item" data-page="mine"><span>●</span><small>我的</small></button>
+    </nav>
+  </div>
+
+  <dialog id="modal" class="modal">
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <div id="modal-title" class="modal-title"></div>
+        <button id="modal-close" class="icon-btn ghost" aria-label="关闭">×</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="./app.js" defer></script>
+</body>
+</html>
