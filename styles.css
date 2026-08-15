@@ -152,3 +152,10 @@ html,body{overflow-x:hidden}
 #mine-content{min-height:1px;display:block!important;visibility:visible!important;opacity:1!important}
 @media(max-width:390px){.modal.tutorial-mode .modal-title,.learn-card h2{font-size:22px!important}.learn-media.white .gym-media-shell{width:200px!important;height:200px!important}.gym-fullscreen-img{width:94vw;height:72vh}.heatmap-wrap.formal .heatmap-svg text{font-size:12px!important}}
 .heatmap-wrap.formal.v25 .heatmap-svg{width:100%;height:auto;display:block}.heatmap-wrap.formal.v25{overflow:hidden}.learn-list.orange .learn-item p::first-letter{color:inherit}
+
+/* V2.6: finalized full-body heatmap uses one coordinate system and one legend. */
+.heatmap-wrap.formal.v26{overflow:hidden;padding:0!important;background:#fff!important}
+.heatmap-wrap.formal.v26 .heatmap-svg{display:block;width:100%!important;height:auto!important;aspect-ratio:3/2!important;background:#fff;shape-rendering:geometricPrecision;text-rendering:geometricPrecision}
+.heatmap-wrap.formal.v26 .heatmap-label text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:32px!important;font-weight:800;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}
+.heatmap-wrap.formal.v26 .heatmap-legend{padding:8px 4px 6px!important;gap:12px!important;font-size:10px!important;border-top:1px solid #f0f1f3}
+@media(max-width:390px){.heatmap-wrap.formal.v26 .heatmap-label text{font-size:34px!important}.heatmap-wrap.formal.v26 .heatmap-legend{gap:8px!important;font-size:9px!important}}
