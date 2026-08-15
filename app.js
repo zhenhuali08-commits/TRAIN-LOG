@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '2.6';
+  const VERSION = '2.7';
 
   const EXERCISES = [
     {id:'bench_press',name:'杠铃卧推',group:'胸',equipment:'杠铃',muscles:['胸','三头','肩'],primary:'胸大肌',secondary:'肱三头肌、三角肌前束',tips:['肩胛骨向后下方收紧并稳定贴住凳面','双脚踩稳地面，保持躯干稳定','杠铃下降至胸部附近后平稳推起，不要弹胸'],mistakes:['肩膀前顶、肩胛失去稳定','手腕过度后折','为了重量牺牲下放控制'],rest:'2–3 分钟'},
@@ -14,7 +14,7 @@
     {id:'overhead_triceps',name:'过顶臂屈伸',group:'三头',equipment:'绳索/哑铃',muscles:['三头'],primary:'肱三头肌长头',secondary:'核心',tips:['肘部指向前上方并尽量固定','核心收紧，避免腰部过度反弓','在舒适范围内充分屈伸肘关节'],mistakes:['肘部大幅外张','腰椎代偿','下放失控'],rest:'60–120 秒'},
     {id:'lateral_raise',name:'哑铃侧平举',group:'肩',equipment:'哑铃',muscles:['肩'],primary:'三角肌中束',secondary:'斜方肌',tips:['身体保持稳定，肩膀自然下沉','手肘微弯，向身体两侧抬起','抬至肩部附近即可，控制下放'],mistakes:['耸肩抢力','大幅摆动身体','为了抬高而旋转手腕'],rest:'60–120 秒'},
     {id:'pullup',name:'引体向上',group:'背',equipment:'自重',muscles:['背','二头'],primary:'背阔肌、上背',secondary:'肱二头肌、前臂',tips:['先稳定肩胛，再让胸口靠近横杆方向','避免耸肩，保持躯干稳定','控制下放到肩胛仍可控的位置'],mistakes:['只用手臂拉','大幅摆腿借力','快速坠落下放'],rest:'2–3 分钟'},
-    {id:'lat_pulldown',name:'高位下拉',group:'背',equipment:'器械',muscles:['背','二头'],primary:'背阔肌',secondary:'肱二头肌、上背',tips:['胸口略抬，肩胛先下沉','把手拉向上胸区域','回程时让背阔肌充分伸展但保持控制'],mistakes:['身体后仰幅度过大','拉到颈后','耸肩并用手臂硬拉'],rest:'90–150 秒'},
+    {id:'lat_pulldown',name:'高位下拉',group:'背',equipment:'器械',muscles:['背','二头'],primary:'背阔肌',secondary:'菱形肌、中下斜方肌、三角肌后束、肱二头肌、前臂肌群',tips:['胸口略抬，肩胛先下沉','把手拉向上胸区域','回程时让背阔肌充分伸展但保持控制'],mistakes:['身体后仰幅度过大','拉到颈后','耸肩并用手臂硬拉'],rest:'90–150 秒'},
     {id:'machine_row',name:'器械划船',group:'背',equipment:'器械',muscles:['背','二头'],primary:'上背、背阔肌',secondary:'肱二头肌、后肩',tips:['先保持胸椎稳定，再向后收肩胛','肘部沿目标肌群合适轨迹向后拉','回程不要含胸塌腰'],mistakes:['身体前后甩动','手腕过度弯曲','肩膀耸起'],rest:'90–150 秒'},
     {id:'cable_row',name:'坐姿/绳索划船',group:'背',equipment:'绳索',muscles:['背','二头'],primary:'背阔肌、菱形肌',secondary:'后肩、肱二头肌',tips:['躯干保持稳定，先收肩胛再拉肘','拉向腹部或下胸附近','回程让肩胛自然前伸但不要塌腰'],mistakes:['身体大幅后仰','耸肩','拉程过短'],rest:'90–150 秒'},
     {id:'reverse_pec_deck',name:'反向蝴蝶机',group:'肩',equipment:'器械',muscles:['肩','背'],primary:'三角肌后束',secondary:'菱形肌、中下斜方肌',tips:['胸口贴稳靠垫或保持躯干固定','手臂向外展开，重点感受后肩','动作幅度以肩部舒适为前提'],mistakes:['肩胛夹得过多导致上背抢力','耸肩','重量过大甩动'],rest:'60–120 秒'},
@@ -45,7 +45,7 @@
     ,{id:'barbell_row',name:'杠铃俯身划船',group:'背',equipment:'杠铃',muscles:['背','二头'],primary:'背阔肌、上背',secondary:'肱二头肌',tips:['髋部后移稳定躯干','杠铃拉向腹部','控制下放'],mistakes:['身体甩动','耸肩','腰背失稳'],rest:'2–3 分钟'}
     ,{id:'one_arm_db_row',name:'单臂哑铃划船',group:'背',equipment:'哑铃',muscles:['背','二头'],primary:'背阔肌',secondary:'上背、肱二头肌',tips:['躯干稳定','肘向髋部方向拉','顶端短暂停顿'],mistakes:['扭转身体','耸肩','用手臂硬拉'],rest:'90–150 秒'}
     ,{id:'tbar_row',name:'T杠划船',group:'背',equipment:'T杠/器械',muscles:['背','二头'],primary:'上背、背阔肌',secondary:'肱二头肌',tips:['胸椎稳定','肘部向后拉','回程控制'],mistakes:['腰部摆动','耸肩','拉程过短'],rest:'2–3 分钟'}
-    ,{id:'face_pull',name:'绳索面拉',group:'肩',equipment:'绳索',muscles:['肩','背'],primary:'三角肌后束',secondary:'肩袖、上背',tips:['拉向眉眼高度','肘部向外打开','肩胛稳定'],mistakes:['身体后仰','耸肩','重量过大'],rest:'60–120 秒'}
+    ,{id:'face_pull',name:'绳索面拉',group:'肩',equipment:'绳索',muscles:['肩','背'],primary:'三角肌后束',secondary:'肩袖外旋肌、菱形肌、中下斜方肌',tips:['拉向眉眼高度','肘部向外打开','肩胛稳定'],mistakes:['身体后仰','耸肩','重量过大'],rest:'60–120 秒'}
     ,{id:'arnold_press',name:'阿诺德推举',group:'肩',equipment:'哑铃',muscles:['肩','三头'],primary:'三角肌',secondary:'肱三头肌',tips:['控制旋转','核心收紧','动作连贯'],mistakes:['腰部后仰','旋转过快','下放过深'],rest:'90–150 秒'}
     ,{id:'upright_row',name:'绳索直立划船',group:'肩',equipment:'绳索',muscles:['肩'],primary:'三角肌中束',secondary:'斜方肌',tips:['肘部引导动作','重量适中','保持肩部舒适'],mistakes:['拉得过高造成不适','耸肩','身体摆动'],rest:'60–120 秒'}
     ,{id:'back_squat',name:'杠铃深蹲',group:'腿',equipment:'杠铃',muscles:['腿','臀'],primary:'股四头肌、臀大肌',secondary:'核心',tips:['脚掌稳定','膝盖与脚尖同向','躯干保持稳定'],mistakes:['膝内扣','脚跟抬起','塌腰'],rest:'2–4 分钟'}
@@ -83,9 +83,9 @@
     {id:'leg_raise',name:'抬腿',group:'腹',equipment:'自重',muscles:['腹'],primary:'腹直肌下部',secondary:'髋屈肌群',tips:['腰背保持稳定','抬腿时轻微卷动骨盆','下降到腰部仍能贴稳的位置'],mistakes:['塌腰','甩腿借力','下降过低导致腰椎代偿'],rest:'45–90 秒'},
     {id:'butterfly_crunch',name:'平板蝴蝶收腹',group:'腹',equipment:'自重',muscles:['腹'],primary:'腹直肌',secondary:'腹斜肌',tips:['脚掌相对、双膝自然打开','呼气时卷起上背让肋骨靠近骨盆','动作幅度以腹部持续收缩为准'],mistakes:['用颈部带动','双腿用力夹紧','快速弹起回落'],rest:'45–90 秒'},
     {id:'lying_leg_raise',name:'仰卧抬腿',group:'腹',equipment:'自重',muscles:['腹'],primary:'腹直肌下部',secondary:'髋屈肌群',tips:['仰卧并让腰背保持稳定','双腿并拢抬起至可控高度','下放时速度更慢'],mistakes:['腰部离地','膝盖随意弯曲借力','下放失控'],rest:'45–90 秒'},
-    {id:'incline_twist_crunch',name:'上斜卷腹转体',group:'腹',equipment:'上斜凳',muscles:['腹'],primary:'腹直肌、腹斜肌',secondary:'髋屈肌群',tips:['固定下肢并保持骨盆稳定','卷起时加入小幅躯干旋转','左右交替并控制回程'],mistakes:['大幅扭腰','用手拉头','只转肩不收腹'],rest:'45–90 秒'},
+    {id:'incline_twist_crunch',name:'上斜卷腹转体',group:'腹',equipment:'上斜凳',muscles:['腹'],primary:'腹斜肌',secondary:'腹直肌、髋屈肌群',tips:['固定下肢并保持骨盆稳定','卷起时加入小幅躯干旋转','左右交替并控制回程'],mistakes:['大幅扭腰','用手拉头','只转肩不收腹'],rest:'45–90 秒'},
     {id:'weighted_russian_twist',name:'负重俄罗斯转体',group:'腹',equipment:'哑铃/杠铃片',muscles:['腹'],primary:'腹斜肌',secondary:'腹直肌、髋屈肌群',tips:['躯干微后倾并收紧核心','负重在身体两侧可控移动','骨盆尽量保持稳定'],mistakes:['只甩手不转躯干','含胸塌腰','重量过大导致失控'],rest:'45–90 秒'},
-    {id:'hammer_one_arm_row',name:'单手悍马机划船',group:'背',equipment:'悍马机',muscles:['背','二头'],primary:'背阔肌、上背',secondary:'肱二头肌、三角肌后束',tips:['胸部贴稳靠垫','先让肩胛下沉再把肘部拉向后方','顶端停顿后控制回程'],mistakes:['身体旋转借力','耸肩','用手臂硬拽'],rest:'90–150 秒'},
+    {id:'hammer_one_arm_row',name:'单手悍马机划船',group:'背',equipment:'悍马高位划船机',muscles:['背','二头'],primary:'背阔肌、菱形肌、中下斜方肌',secondary:'三角肌后束、肱二头肌、前臂肌群',tips:['胸部贴稳靠垫','先让肩胛下沉再把肘部拉向后方','顶端停顿后控制回程'],mistakes:['身体旋转借力','耸肩','用手臂硬拽'],rest:'90–150 秒'},
     {id:'assisted_pullup',name:'引体向上辅助',group:'背',equipment:'辅助引体机',muscles:['背','二头'],primary:'背阔肌',secondary:'肱二头肌、前臂',tips:['选择能完成标准全程的辅助重量','先下沉肩胛再屈肘上拉','控制下降到手臂接近伸直'],mistakes:['耸肩','摆动身体','辅助过大导致背部不发力'],rest:'90–150 秒'},
     {id:'goblet_squat',name:'哑铃酒杯深蹲',group:'腿',equipment:'哑铃',muscles:['腿','臀'],primary:'股四头肌、臀大肌',secondary:'核心、内收肌',tips:['哑铃贴近胸前','膝盖与脚尖方向一致','保持全脚掌受力下蹲'],mistakes:['脚跟抬起','膝盖内扣','身体过度前倾'],rest:'90–150 秒'},
     {id:'reverse_hack_squat',name:'俯卧反向哈克深蹲',group:'腿',equipment:'哈克机',muscles:['腿','臀'],primary:'臀大肌、股四头肌',secondary:'腘绳肌',tips:['面向器械站稳，肩背贴靠垫','髋膝同时屈曲下降','脚掌稳定推起并充分伸髋'],mistakes:['腰背松散','膝盖内扣','下降过快'],rest:'2–3 分钟'},
@@ -114,30 +114,56 @@
       '❌ 禁忌：过度反弓腰、砸胸反弹、手腕严重后折、耸肩、杠铃落到脖子附近、疲劳时强行锁死肘关节。'
     ]},
     lat_pulldown:{tips:[
-      '坐稳后先锁住大腿垫，脚掌踩实；握距略宽于肩，胸口轻抬，核心收紧，身体只允许轻微后倾。',
-      '起始先做“肩胛下沉”：不要急着弯肘，先把肩膀远离耳朵，让背阔肌进入受力状态。',
-      '随后把肘部向身体两侧、向下拉，想象“肘去找裤兜”，把杆拉向锁骨下方/上胸位置。',
-      '最低点停 0.5–1 秒，胸口保持抬起，肩膀不要前顶；不要为了碰胸把身体大幅后仰。',
-      '回程慢慢伸直手臂，让肩胛自然上旋，感受背阔肌被拉长；但不要完全松肩、让配重猛撞。'
+      '准备：调好大腿垫并坐稳，双脚全脚掌踩实；采用正握，握距约为肩宽的 1.2–1.5 倍，手腕保持中立。',
+      '姿势：核心收紧、胸口轻抬，躯干只向后倾约 10°–20°；头部与脊柱保持一线，不仰头迎杆。',
+      '启动：手臂伸直时先让肩胛下沉，使肩膀远离耳朵；随后把肘部向身体两侧、向下带动，不要先用二头弯举。',
+      '下拉：把宽杆拉向锁骨下方/上胸，前臂尽量位于手腕下方；最低点停 0.5–1 秒，感受背阔肌收紧。',
+      '回程：吸气并用 2–3 秒缓慢伸肘，让肩胛自然上旋、背阔肌充分拉长；最上方仍保持躯干稳定，不让配重撞击。'
     ],mistakes:[
-      '❌ 拉到颈后：会迫使肩关节进入不自然位置，直接改为拉向上胸。',
-      '❌ 身体后仰太多变成“半划船”：重量通常过大，应减重后让躯干更稳定。',
-      '❌ 全程只弯手肘：先做肩胛下沉，再让肘部向下走，背部发力会更明显。',
-      '❌ 耸肩、头往前伸、手腕折弯；这些都会让斜方肌上束和前臂抢力。',
-      '回程不要直接放掉配重；最上方仍保持核心稳定和肩关节可控。'
+      '把杆拉到颈后：肩关节和颈部会进入不利位置；宽杆只拉向上胸。',
+      '身体大幅后仰并前后摆动，动作变成划船；这通常说明重量过大。',
+      '先弯肘、只用手臂拉，肩胛没有先下沉，导致二头和前臂提前力竭。',
+      '耸肩、头向前伸或手腕折弯；疲劳时更要保持肩膀远离耳朵。',
+      '回程直接放掉配重，或为了碰胸把杆硬拉得过低、肘部过度向后跑。'
     ]},
     face_pull:{tips:[
-      '滑轮调到鼻子到额头高度，使用绳索；站稳后核心收紧，身体可轻微后倾，但不要用体重向后倒。',
-      '先让肩胛保持稳定，再把绳索拉向眉眼/额头区域；肘部向外打开，前臂在末端尽量与地面接近水平。',
-      '末端想象把绳索两端拉到耳朵两侧，同时做轻微外旋，重点感受三角肌后束和肩袖。',
-      '顶端停 1 秒，肩膀保持远离耳朵；回程缓慢伸直手臂，让后肩充分拉长。',
-      '重量宁轻勿重，面拉的目标是轨迹和肩胛控制，不是追求大重量。'
+      '准备：把滑轮调到眼睛至额头高度并装上绳索，采用前后站姿；核心与臀部收紧，肋骨不要外翻。',
+      '握法：双手握住绳索两端，手腕保持中立；起始手臂伸直但肩膀不耸起，身体只允许很小的后倾。',
+      '拉动：肘部向外、向后打开，把绳索中心拉向鼻梁/眉眼位置；不要把肘夹在身体两侧。',
+      '末端：把绳索两端分到耳朵两侧，前臂接近竖直并完成肩关节外旋；停 1 秒，感受后束、肩袖和肩胛之间收紧。',
+      '回程：用 2–3 秒缓慢伸直手臂，肩胛自然前伸但仍可控；选择能全程保持轨迹的轻至中等重量。'
     ],mistakes:[
-      '❌ 把绳索拉到胸口：会更像高位划船，失去面拉对后肩和肩袖的刺激。',
-      '❌ 身体大幅后仰借力：说明重量过大，应立即减重。',
-      '❌ 耸肩、肘部下沉：肘应向外打开，肩膀始终保持下沉。',
-      '❌ 回程过快或肩膀完全被拉向前；全程保持肩胛可控。',
-      '❌ 手腕向内折、绳索两端没有拉开，会让动作末端外旋不足。'
+      '绳索拉到胸口、肘部贴身下沉，动作变成高位划船，后束和肩袖刺激明显下降。',
+      '身体大幅后仰、屈膝弹动或用体重把绳索甩回来；应立即减轻重量。',
+      '全程耸肩，或末端头向前探去“碰绳”；保持颈部中立、肩膀远离耳朵。',
+      '只把绳索拉近脸部，却没有把两端向耳侧分开，导致末端外旋不足。',
+      '回程突然放掉配重，肩膀被绳索猛拽向前；离心阶段必须持续控制。'
+    ]},
+    incline_twist_crunch:{tips:[
+      '准备：选择中等上斜角度，双脚或小腿固定在支架上；骨盆保持稳定，腰背自然贴近凳面。',
+      '手位：双手轻放耳侧或胸前，不要十指交叉抱头；下巴与胸口之间保留一个拳头的距离。',
+      '卷起：呼气并先让肋骨靠近骨盆，把肩胛骨卷离凳面；腹部已经收紧后，再让胸廓小幅转向对侧髋部。',
+      '顶端：转体来自胸廓与躯干，不是只转头或甩手；左右交替，每次在腹斜肌收紧处短暂停顿。',
+      '回程：吸气并缓慢展开躯干，直到肩背轻触凳面；腹部仍保持张力，不要让腰椎在底部过度反弓。'
+    ],mistakes:[
+      '先用髋屈肌坐起，到了顶端才突然扭一下肩膀；应先卷腹，再完成小幅转体。',
+      '双手拉头、下巴死贴胸口或只转颈部，容易造成颈部不适。',
+      '借助惯性快速弹起、左右甩动，腹肌没有持续承受张力。',
+      '追求过大的腰椎旋转幅度；转体应由胸廓带动，并始终保持骨盆稳定。',
+      '凳面过陡或下降过深，导致腰椎反弓、下背疼痛；降低坡度并缩小幅度。'
+    ]},
+    hammer_one_arm_row:{tips:[
+      '调节：坐稳后让工作侧手臂伸直时把手位于前上方；大腿垫压稳双腿，双脚踩实，非工作手握住固定把手。',
+      '起始：胸口自然抬起、核心收紧，肩胛可向前上方自然伸展，但肩膀不要耸到耳边；手腕保持中立。',
+      '拉动：先让肩胛下沉并后收，再沿器械弧线把肘部向下、向后拉向同侧肋骨；想象用肘带动，不用手臂硬拽。',
+      '顶端：把手接近上腹/下胸区域时停 0.5–1 秒，胸口和骨盆都保持正对前方，不为追求幅度扭转身体。',
+      '回程：用 2–3 秒缓慢伸直手臂，让背阔肌和上背充分拉长；肩关节仍保持可控，不让杠片撞击。'
+    ],mistakes:[
+      '座椅或大腿垫高度不合适，导致起始够不到把手、顶端肘部轨迹过高或过低。',
+      '身体向工作侧旋转、后仰或借腰发力；单臂训练时胸口和骨盆更要保持稳定。',
+      '耸肩起拉，肘部没有沿器械弧线向下后方移动，斜方肌上束和二头过度抢力。',
+      '只想着把手拉近，用手腕弯曲和二头弯举代替肩胛、背部发力。',
+      '回程幅度太短或直接放掉重量，失去背部拉长和离心控制。'
     ]},
     incline_walk:{tips:[
       '先以平地慢走热身 3–5 分钟，再逐渐提高坡度；常用坡度可从 6%–10% 起步，适应后再到 10%–15%。',
@@ -264,10 +290,10 @@
   const GYM_SHA='7455efae41b330c265e7cd4b78dfa848e7ce5ebd';
   const GYM_BASE=`https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@${GYM_SHA}`;
   const GYM_DATA_URL=`${GYM_BASE}/data/exercises.json`;
-  const GYM_QUERY={bench_press:'barbell bench press',incline_db_press:'dumbbell incline bench press',incline_machine_press:'lever incline chest press',pec_deck:'lever seated fly',cable_fly:'cable middle fly',triceps_pushdown:'cable pushdown',overhead_triceps:'cable overhead triceps extension',lateral_raise:'dumbbell lateral raise',pullup:'pull-up',lat_pulldown:'cable lat pulldown',machine_row:'lever seated row',cable_row:'cable seated row',reverse_pec_deck:'lever seated reverse fly',barbell_curl:'barbell curl',hammer_curl:'dumbbell hammer curl',smith_shoulder_press:'smith shoulder press',reverse_fly:'dumbbell reverse fly',hack_squat:'sled hack squat',rdl:'barbell romanian deadlift',leg_curl:'lever lying leg curl',calf_raise:'standing calf raise',hanging_leg_raise:'hanging leg raise',cable_crunch:'cable kneeling crunch',incline_press_any:'dumbbell incline bench press',pulldown_any:'cable lat pulldown',crunch_combo:'crunch',machine_press:'lever chest press',bulgarian_split_squat:'split squat',biceps_curl:'dumbbell biceps curl',triceps_pressdown:'cable pushdown',front_raise:'barbell front raise',barbell_shoulder_press:'barbell standing wide military press',shrug:'dumbbell shrug',flat_db_press:'dumbbell bench press',decline_press:'barbell decline bench press',chest_dip:'chest dip',deadlift:'barbell deadlift',barbell_row:'barbell bent over row',one_arm_db_row:'dumbbell one arm bent-over row',tbar_row:'t-bar row',face_pull:'cable standing face pull with rope',arnold_press:'dumbbell arnold press',upright_row:'cable upright row',back_squat:'barbell full squat',leg_press:'sled 45 leg press',leg_extension:'lever leg extension',preacher_curl:'barbell preacher curl',cable_curl:'cable curl',skull_crusher:'barbell lying triceps extension',close_grip_bench:'barbell close-grip bench press',plank:'front plank',wrist_curl:'barbell wrist curl',treadmill_run:'run',incline_walk:'walking on incline treadmill',elliptical:'walk elliptical cross trainer',stationary_bike:'stationary bike run',stair_climber:'walking on stepmill',db_shoulder_press:'dumbbell seated shoulder press',machine_crunch:'lever seated crunch',sit_up:'3/4 sit-up',leg_raise:'lying leg raise flat bench',butterfly_crunch:'3/4 sit-up',lying_leg_raise:'lying leg raise flat bench',incline_twist_crunch:'twisting crunch',weighted_russian_twist:'weighted russian twist',hammer_one_arm_row:'lever one arm bent over row',assisted_pullup:'assisted pull-up',goblet_squat:'dumbbell goblet squat',reverse_hack_squat:'sled hack squat',triceps_rope_overhead:'cable overhead triceps extension',triceps_kickback:'dumbbell kickback',bench_dip:'bench dip',single_arm_pushdown:'cable one arm tricep pushdown'};
-  const GYM_DIRECT={bench_press:'videos/0025-EIeI8Vf.gif',back_squat:'videos/0043-qXTaZnJ.gif',pullup:'videos/0652-lBDjFxJ.gif',lateral_raise:'videos/0334-DsgkuIt.gif',db_shoulder_press:'videos/0405-znQUdHY.gif',reverse_pec_deck:'videos/0602-myfUsKf.gif',elliptical:'videos/2141-rjtuP6X.gif',sit_up:'videos/0001-2gPfomN.gif',machine_crunch:'videos/1452-Wgaz7pm.gif',barbell_shoulder_press:'videos/1457-Kyd9Rz5.gif',assisted_pullup:'videos/0017-kiJ4Z2K.gif',leg_raise:'videos/0620-WhuFnR7.gif',lying_leg_raise:'videos/0620-WhuFnR7.gif',goblet_squat:'videos/1760-yn8yg1r.gif',leg_extension:'videos/0585-my33uHU.gif'};
+  const GYM_QUERY={bench_press:'barbell bench press',incline_db_press:'dumbbell incline bench press',incline_machine_press:'lever incline chest press',pec_deck:'lever seated fly',cable_fly:'cable middle fly',triceps_pushdown:'cable pushdown',overhead_triceps:'cable overhead triceps extension',lateral_raise:'dumbbell lateral raise',pullup:'pull-up',lat_pulldown:'cable pulldown pro lat bar',machine_row:'lever seated row',cable_row:'cable seated row',reverse_pec_deck:'lever seated reverse fly',barbell_curl:'barbell curl',hammer_curl:'dumbbell hammer curl',smith_shoulder_press:'smith shoulder press',reverse_fly:'dumbbell reverse fly',hack_squat:'sled hack squat',rdl:'barbell romanian deadlift',leg_curl:'lever lying leg curl',calf_raise:'standing calf raise',hanging_leg_raise:'hanging leg raise',cable_crunch:'cable kneeling crunch',incline_press_any:'dumbbell incline bench press',pulldown_any:'cable pulldown pro lat bar',crunch_combo:'crunch',machine_press:'lever chest press',bulgarian_split_squat:'split squat',biceps_curl:'dumbbell biceps curl',triceps_pressdown:'cable pushdown',front_raise:'barbell front raise',barbell_shoulder_press:'barbell standing wide military press',shrug:'dumbbell shrug',flat_db_press:'dumbbell bench press',decline_press:'barbell decline bench press',chest_dip:'chest dip',deadlift:'barbell deadlift',barbell_row:'barbell bent over row',one_arm_db_row:'dumbbell one arm bent-over row',tbar_row:'t-bar row',face_pull:'cable standing rear delt row with rope',arnold_press:'dumbbell arnold press',upright_row:'cable upright row',back_squat:'barbell full squat',leg_press:'sled 45 leg press',leg_extension:'lever leg extension',preacher_curl:'barbell preacher curl',cable_curl:'cable curl',skull_crusher:'barbell lying triceps extension',close_grip_bench:'barbell close-grip bench press',plank:'front plank',wrist_curl:'barbell wrist curl',treadmill_run:'run',incline_walk:'walking on incline treadmill',elliptical:'walk elliptical cross trainer',stationary_bike:'stationary bike run',stair_climber:'walking on stepmill',db_shoulder_press:'dumbbell seated shoulder press',machine_crunch:'lever seated crunch',sit_up:'3/4 sit-up',leg_raise:'lying leg raise flat bench',butterfly_crunch:'3/4 sit-up',lying_leg_raise:'lying leg raise flat bench',incline_twist_crunch:'incline twisting sit-up',weighted_russian_twist:'weighted russian twist',hammer_one_arm_row:'lever one arm lateral high row',assisted_pullup:'assisted pull-up',goblet_squat:'dumbbell goblet squat',reverse_hack_squat:'sled hack squat',triceps_rope_overhead:'cable overhead triceps extension',triceps_kickback:'dumbbell kickback',bench_dip:'bench dip',single_arm_pushdown:'cable one arm tricep pushdown'};
+  const GYM_DIRECT={bench_press:'videos/0025-EIeI8Vf.gif',back_squat:'videos/0043-qXTaZnJ.gif',pullup:'videos/0652-lBDjFxJ.gif',lateral_raise:'videos/0334-DsgkuIt.gif',db_shoulder_press:'videos/0405-znQUdHY.gif',reverse_pec_deck:'videos/0602-myfUsKf.gif',elliptical:'videos/2141-rjtuP6X.gif',sit_up:'videos/0001-2gPfomN.gif',machine_crunch:'videos/1452-Wgaz7pm.gif',barbell_shoulder_press:'videos/1457-Kyd9Rz5.gif',assisted_pullup:'videos/0017-kiJ4Z2K.gif',leg_raise:'videos/0620-WhuFnR7.gif',lying_leg_raise:'videos/0620-WhuFnR7.gif',goblet_squat:'videos/1760-yn8yg1r.gif',leg_extension:'videos/0585-my33uHU.gif',face_pull:'videos/0233-ZfyAGhK.gif',lat_pulldown:'videos/0197-qdRxqCj.gif',incline_twist_crunch:'videos/0495-9ZGZuOD.gif',hammer_one_arm_row:'videos/1356-OIFMAp1.gif'};
   const GYM_GROUP_FALLBACK={胸:'videos/0025-EIeI8Vf.gif',背:'videos/0652-lBDjFxJ.gif',肩:'videos/0334-DsgkuIt.gif',腿:'videos/0043-qXTaZnJ.gif',臀:'videos/0043-qXTaZnJ.gif',二头:'videos/0405-znQUdHY.gif',三头:'videos/0025-EIeI8Vf.gif',腹:'videos/0001-2gPfomN.gif',小腿:'videos/0043-qXTaZnJ.gif',有氧:'videos/2141-rjtuP6X.gif'};
-  const GYM_MAP_KEY='train-log-gym-media-map-v25';let persistedGymMap={};try{persistedGymMap=JSON.parse(localStorage.getItem(GYM_MAP_KEY)||'{}')||{};}catch(e){}const saveGymMap=()=>{try{localStorage.setItem(GYM_MAP_KEY,JSON.stringify(persistedGymMap));}catch(e){}};
+  const GYM_MAP_KEY='train-log-gym-media-map-v27';let persistedGymMap={};try{persistedGymMap=JSON.parse(localStorage.getItem(GYM_MAP_KEY)||'{}')||{};}catch(e){}const saveGymMap=()=>{try{localStorage.setItem(GYM_MAP_KEY,JSON.stringify(persistedGymMap));}catch(e){}};
   const VIDEO_MAP={};
   let gymIndexPromise=null; const gymCache={};
   const DIET = {
@@ -300,6 +326,7 @@
   state.workouts=Array.isArray(state.workouts)?state.workouts:[];
   state.customExercises=Array.isArray(state.customExercises)?state.customExercises:[];
   state.settings={...defaultState().settings,...(state.settings||{})};
+  state.wellness={...defaultState().wellness,...(state.wellness||{})};
   if(Array.isArray(state.plans)&&state.plans.length) PLAN=state.plans; else state.plans=PLAN;
   let page = 'home';
   let timerInterval = null;
@@ -422,6 +449,19 @@
       results[g]=Math.round(clamp((h/target)*100,10,100));
     });
     return results;
+  }
+  function showRecoveryDetail(){
+    const r=recovery();
+    openModal('体力恢复',`<div class="card flat"><div class="stat-row"><span>当前恢复</span><strong>${r.score}% · ${esc(r.label)}</strong></div></div><section class="section"><div class="section-title" style="margin-bottom:10px">评分依据</div><div class="card flat">${r.items.map(([name,value,adjustment])=>`<div class="stat-row"><span>${esc(name)}</span><strong>${esc(value)}${adjustment&&String(value)!==String(adjustment)?` · ${adjustment>0?'+':''}${adjustment}`:''}</strong></div>`).join('')}</div></section><div class="note">恢复评分结合训练间隔、上次训练时长与疲劳，以及今天的睡眠、精神和酸痛感受。</div>`);
+  }
+  function showWellness(){
+    const w=state.wellness;
+    const options=(selected)=>[1,2,3,4,5].map(v=>`<option value="${v}" ${Number(selected)===v?'selected':''}>${v}</option>`).join('');
+    openModal('更新今日状态',`<div class="form-grid"><div class="field"><label>睡眠感受（1–5）</label><select id="wellness-sleep">${options(w.sleep)}</select></div><div class="field"><label>精神状态（1–5）</label><select id="wellness-energy">${options(w.energy)}</select></div><div class="field full"><label>肌肉酸痛（1=轻，5=重）</label><select id="wellness-soreness">${options(w.soreness)}</select></div></div><button class="primary-btn" id="save-wellness" style="margin-top:14px">保存今日状态</button>`);
+    document.getElementById('save-wellness').onclick=()=>{
+      state.wellness={sleep:Number(document.getElementById('wellness-sleep').value),energy:Number(document.getElementById('wellness-energy').value),soreness:Number(document.getElementById('wellness-soreness').value),updated:today()};
+      saveState();closeModal();renderHome();toast('今日状态已更新');
+    };
   }
   function bestPreviousExercise(exId,excludeId=null){
     const ws=[...state.workouts].filter(w=>w.id!==excludeId).sort((a,b)=>new Date(b.endedAt)-new Date(a.endedAt));
@@ -741,7 +781,8 @@
     if(/竖脊|下背|后链/.test(t))add('竖脊肌');
     if(/三角肌前|前三角/.test(t))add('三角肌前束');
     if(/三角肌中|中束/.test(t))add('三角肌中束');
-    if(/三角肌后|后肩|肩袖/.test(t))add('三角肌后束');
+    if(/三角肌后|后肩/.test(t))add('三角肌后束');
+    if(/肩袖|冈下|小圆/.test(t))add('肩袖外旋肌');
     if(/三角肌(?!前|中|后)|(^|[、， ])肩($|[、， ])/.test(t)){add('三角肌前束');add('三角肌中束');}
     if(/肱二头|二头|肱肌/.test(t))add('肱二头肌');
     if(/肱三头|三头/.test(t))add('肱三头肌');
@@ -778,6 +819,7 @@
       '背阔肌':{side:'back',anchor:[976,354],paths:['M959 266 C978 258 1001 276 1008 307 L1003 421 C984 438 964 423 950 397Z','M1046 307 C1053 276 1076 258 1095 266 L1104 397 C1090 423 1070 438 1051 421Z']},
       '竖脊肌':{side:'back',anchor:[1027,379],paths:['M1008 307 L1025 319 L1020 451 L1004 423Z','M1029 319 L1046 307 L1050 423 L1034 451Z']},
       '三角肌后束':{side:'back',anchor:[929,205],paths:['M904 175 C913 151 934 146 961 165 L957 223 C945 244 925 253 909 241Z','M1093 165 C1120 146 1141 151 1150 175 L1145 241 C1129 253 1109 244 1097 223Z']},
+      '肩袖外旋肌':{side:'back',anchor:[972,242],paths:['M948 205 C961 194 982 199 994 216 L989 274 C972 286 954 278 945 258Z','M1060 216 C1072 199 1093 194 1106 205 L1109 258 C1100 278 1082 286 1065 274Z']},
       '肱三头肌':{side:'back',anchor:[906,301],paths:['M891 253 C907 245 924 255 929 280 L918 351 C904 359 890 347 886 328Z','M1125 280 C1130 255 1147 245 1163 253 L1168 328 C1164 347 1150 359 1136 351Z']},
       '臀大肌':{side:'back',anchor:[1072,442],paths:['M958 385 C984 366 1014 373 1025 406 L1022 512 C998 535 972 527 958 500Z','M1029 406 C1040 373 1070 366 1096 385 L1096 500 C1082 527 1056 535 1032 512Z']},
       '腘绳肌群':{side:'back',anchor:[1073,580],paths:['M969 503 C993 492 1016 509 1019 539 L1012 663 C993 678 975 664 966 641Z','M1035 539 C1038 509 1061 492 1085 503 L1088 641 C1079 664 1061 678 1042 663Z']},
