@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '2.9';
+  const VERSION = '3.0';
 
   const EXERCISES = [
     {id:'bench_press',name:'杠铃卧推',group:'胸',equipment:'杠铃',muscles:['胸','三头','肩'],primary:'胸大肌',secondary:'肱三头肌、三角肌前束',tips:['肩胛骨向后下方收紧并稳定贴住凳面','双脚踩稳地面，保持躯干稳定','杠铃下降至胸部附近后平稳推起，不要弹胸'],mistakes:['肩膀前顶、肩胛失去稳定','手腕过度后折','为了重量牺牲下放控制'],rest:'2–3 分钟'},
@@ -408,7 +408,9 @@
   let timerInterval = null;
   let restRemaining = 0;
   let activeExerciseFilter = '全部';
-  let historyMode = 'list';
+  let recordMonthOpen = false;
+  let recordYear = null;
+  let selectedRecordMonth = null;
   let dataTab = 'body';
   let dietBatch = 0;
   let dietMode = state.settings.dietMode || 'training';
@@ -432,6 +434,9 @@
   function planById(id){ return PLAN.find(p=>p.id===id); }
   function formatDate(dateStr){ if(!dateStr)return ''; const d=new Date(`${dateStr}T00:00:00`); return `${d.getMonth()+1}月${d.getDate()}日`; }
   function formatDateTime(ts){ const d=new Date(ts); return `${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+  function currentDateLabel(){const d=new Date(),week=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];return `${d.getMonth()+1}月${d.getDate()}日${week[d.getDay()]}`;}
+  function pageIntro(title,subtitle,actions=''){return `<div class="page-intro"><div class="page-intro-copy"><div class="page-title">${esc(title)}</div><div class="page-subtitle">${esc(subtitle)}</div></div>${actions?`<div class="page-intro-actions">${actions}</div>`:''}</div>`;}
+  function scheduleDateRefresh(){const now=new Date(),next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,2);setTimeout(()=>{if(page==='home')renderHome();scheduleDateRefresh();},Math.max(1000,next-now));}
   function durationText(ms){ const min=Math.max(1,Math.round(ms/60000)); if(min<60)return `${min} 分钟`; return `${Math.floor(min/60)}小时 ${min%60}分钟`; }
   function sinceText(ts){ if(!ts)return '暂无训练记录'; const ms=Date.now()-new Date(ts).getTime(); const h=Math.max(0,Math.floor(ms/3600000)); if(h<1)return `${Math.floor(ms/60000)} 分钟`; if(h<24)return `${h} 小时`; return `${Math.floor(h/24)}天 ${h%24}小时`; }
   function loadState(){ try{ const raw=localStorage.getItem(STORAGE_KEY); if(raw){ const s=JSON.parse(raw); return {...defaultState(),...s}; } }catch(e){} return defaultState(); }
@@ -570,7 +575,7 @@
   }
 
   function render(){
-    document.getElementById('topbar-subtitle').textContent = ({home:'私人训练日志',training:'计划与训练',exercises:'动作教学',history:'训练历史',mine:'身体数据与饮食'})[page];
+    document.getElementById('topbar-subtitle').textContent = ({home:'私人训练日志',training:'计划与训练',exercises:'动作教学',history:'训练记录',mine:'身体数据与饮食'})[page];
     if(page==='home')renderHome();
     if(page==='training')renderTraining();
     if(page==='exercises')renderExercisesPage();
@@ -583,8 +588,7 @@
     const r=recovery(), last=latestWorkout(), next=nextPlan(), body=lastBody(), week=weeklyWorkouts(), avg=sevenDayAvgWeight(), muscles=muscleRecovery();
     const avgMuscle=Math.round(Object.values(muscles).reduce((a,b)=>a+b,0)/Object.values(muscles).length);
     main.innerHTML=`
-      <div class="page-title">今天</div>
-      <div class="page-subtitle">打开就知道：恢复怎样、上次练了什么、下一练是什么。</div>
+      ${pageIntro('今天',currentDateLabel())}
       <section class="card hero-card" id="recovery-card">
         <div class="hero-kicker">↻ 体力恢复</div>
         <div class="hero-row">
@@ -614,7 +618,7 @@
       </section>
 
       <section class="section">
-        <div class="section-head"><div class="section-title">本周</div><button class="section-link" data-go="history">训练历史</button></div>
+        <div class="section-head"><div class="section-title">本周</div><button class="section-link" data-go="history">训练记录</button></div>
         <div class="card">
           <div class="stat-row"><span>力量训练</span><strong>${week.length} / 4</strong></div>
           <div class="progress-bar"><i style="width:${clamp(week.length/4*100,0,100)}%"></i></div>
@@ -638,7 +642,7 @@
     const history=[...state.workouts].sort((a,b)=>new Date(b.endedAt)-new Date(a.endedAt));
     const next=nextPlan();
     main.innerHTML=`
-      <div class="page-title">训练</div><div class="page-subtitle">训练计划和当天训练合在一起，按第 1 → 4 练循环，不绑定星期几。</div>
+      ${pageIntro('训练','训练计划和当天训练合在一起，按第 1 → 4 练循环，不绑定星期几。')}
       <div class="card current-plan"><div class="small muted">建议下一练</div><h2>${esc(next.name)}</h2><div class="small muted">${next.exercises.length} 个动作 · 第 ${next.index} 练</div><button class="primary-btn" style="margin-top:14px" data-start-plan="${next.id}">开始训练</button><button class="secondary-btn neutral free-training-btn" style="margin-top:9px;width:100%" id="free-workout-btn">＋ 自由训练</button></div>
       <section class="section"><div class="section-head"><div class="section-title">四练计划</div></div>${PLAN.map(p=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${p.index}</div><div class="plan-info"><strong>${esc(p.name)}</strong><small>${p.exercises.length} 个动作 · ${esc(p.note)}</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-plan="${p.id}">查看动作</button><button class="secondary-btn" data-start-plan="${p.id}">开始训练</button></div></div>`).join('')}</section>
       <section class="section"><div class="section-head"><div class="section-title">最近训练</div><button class="section-link" data-go="history">查看全部</button></div>${history.length?history.slice(0,3).map(historyItem).join(''):'<div class="card empty">还没有训练记录</div>'}</section>`;
@@ -648,18 +652,43 @@
   }
 
   function renderExercisesPage(){
-    main.innerHTML=`<div class="page-title">动作</div><div class="page-subtitle">力量 + 有氧动作库；每个动作都可查看 3D 动图、视频讲解、动作要点、常见错误和训练肌群图。</div>${exerciseLibraryHTML()}`;
+    main.innerHTML=`${pageIntro('动作','力量 + 有氧动作库；每个动作都可查看 3D 动图、视频讲解、动作要点、常见错误和训练肌群图。')}<div class="page-scroll-content">${exerciseLibraryHTML()}</div>`;
     bindExerciseLibrary();
   }
 
   function renderHistoryPage(){
     const history=[...state.workouts].sort((a,b)=>new Date(b.endedAt)-new Date(a.endedAt));
-    main.innerHTML=`<div class="page-title">历史</div><div class="page-subtitle">列表和日历两种方式查看训练。</div>
-      <div class="tabs"><button class="tab ${historyMode==='list'?'active':''}" data-history-mode="list">列表</button><button class="tab ${historyMode==='calendar'?'active':''}" data-history-mode="calendar">日历</button></div>
-      <div id="history-content">${historyMode==='list'?(history.length?`<div class="list">${history.map(historyItem).join('')}</div>`:'<div class="card empty">暂无训练历史</div>'):calendarHTML(history)}</div>`;
-    document.querySelectorAll('[data-history-mode]').forEach(b=>b.onclick=()=>{historyMode=b.dataset.historyMode;renderHistoryPage();});
+    const months=availableRecordMonths(history),latest=months[0]||monthKey(new Date());
+    if(!selectedRecordMonth||!months.includes(selectedRecordMonth))selectedRecordMonth=latest;
+    if(!recordYear)recordYear=Number(selectedRecordMonth.slice(0,4));
+    const selectedHistory=history.filter(w=>monthKey(w.endedAt)===selectedRecordMonth);
+    const [selectedYear,selectedMonth]=selectedRecordMonth.split('-').map(Number);
+    main.innerHTML=`<div class="page-intro record-intro">
+        <div class="record-title-row"><div class="page-intro-copy"><div class="page-title">记录</div><div class="page-subtitle">按月份查看每次训练，快速回顾训练表现。</div></div><button class="record-stats-btn" id="record-stats-btn">统计</button></div>
+        <button class="record-month-trigger" id="record-month-trigger" aria-expanded="${recordMonthOpen}"><span>${selectedYear}年${selectedMonth}月</span><i>${recordMonthOpen?'⌃':'⌄'}</i></button>
+        ${recordMonthOpen?recordMonthPanel(months,recordYear):''}
+      </div>
+      <div id="history-content" class="page-scroll-content">${selectedHistory.length?`<div class="record-month-heading"><strong>${selectedMonth}月</strong><span>${selectedHistory.length} 次训练</span></div><div class="list">${selectedHistory.map(historyItem).join('')}</div>`:'<div class="card empty">这个月还没有训练记录</div>'}</div>`;
+    document.getElementById('record-month-trigger').onclick=()=>{recordMonthOpen=!recordMonthOpen;renderHistoryPage();};
+    document.getElementById('record-stats-btn').onclick=showRecordStats;
+    document.querySelectorAll('[data-record-year]').forEach(b=>b.onclick=()=>{recordYear=Number(b.dataset.recordYear);recordMonthOpen=true;renderHistoryPage();});
+    document.querySelectorAll('[data-record-month]').forEach(b=>b.onclick=()=>{selectedRecordMonth=b.dataset.recordMonth;recordYear=Number(selectedRecordMonth.slice(0,4));recordMonthOpen=false;renderHistoryPage();});
     document.querySelectorAll('[data-history]').forEach(b=>b.onclick=()=>showWorkoutDetail(b.dataset.history));
-    document.querySelectorAll('[data-cal-date]').forEach(b=>b.onclick=()=>showCalendarDay(b.dataset.calDate));
+  }
+
+  function monthKey(value){const d=value instanceof Date?value:new Date(value);return Number.isNaN(d.getTime())?today().slice(0,7):`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+  function availableRecordMonths(history=state.workouts){return [...new Set(history.map(w=>monthKey(w.endedAt)))].sort().reverse();}
+  function recordMonthPanel(months,year){
+    const years=[...new Set(months.map(k=>Number(k.slice(0,4))))].sort((a,b)=>b-a),shownYears=years.length?years:[new Date().getFullYear()];
+    if(!shownYears.includes(year))year=shownYears[0];
+    return `<div class="record-month-panel"><div class="record-year-tabs">${shownYears.map(y=>`<button class="${y===year?'active':''}" data-record-year="${y}">${y}年</button>`).join('')}</div><div class="record-month-grid">${Array.from({length:12},(_,i)=>{const key=`${year}-${String(i+1).padStart(2,'0')}`,enabled=months.includes(key);return `<button ${enabled?'':'disabled'} class="${enabled?'available':''} ${key===selectedRecordMonth?'active':''}" ${enabled?`data-record-month="${key}"`:''}>${i+1}月</button>`;}).join('')}</div></div>`;
+  }
+
+  function showRecordStats(){
+    const history=[...state.workouts].filter(w=>w.endedAt),durationMinutes=history.reduce((sum,w)=>sum+Math.max(0,new Date(w.endedAt)-new Date(w.startedAt))/60000,0);
+    const groups={};history.forEach(w=>(w.exercises||[]).forEach(e=>{const count=(e.sets||[]).filter(s=>s.done&&!s.warmup).length;if(count){const group=exercise(e.exerciseId).group||'其他';groups[group]=(groups[group]||0)+count;}}));
+    const groupEntries=Object.entries(groups).sort((a,b)=>b[1]-a[1]),maxGroup=Math.max(1,...groupEntries.map(x=>x[1]));
+    openModal('记录统计',`<div class="record-summary-grid"><div><strong>${history.length}</strong><span>训练次数</span></div><div><strong>${durationMinutes>=60?round(durationMinutes/60,1)+'h':Math.round(durationMinutes)+'min'}</strong><span>训练时长</span></div><div><strong>${history.reduce((n,w)=>n+workingSets(w),0)}</strong><span>有效组</span></div><div><strong>${Math.round(history.reduce((n,w)=>n+totalVolume(w),0)).toLocaleString()}</strong><span>训练容量 kg</span></div></div><section class="section record-stat-section"><div class="section-title">部位分布</div><div class="card flat">${groupEntries.length?groupEntries.map(([g,n])=>`<div class="record-part-row"><span>${esc(g)}</span><div><i style="width:${Math.round(n/maxGroup*100)}%"></i></div><strong>${n}组</strong></div>`).join(''):'<div class="empty">完成训练后自动生成统计</div>'}</div></section><div class="info-note">统计根据已完成的训练组自动汇总，热身组不计入有效组。</div>`);
   }
 
   function calendarHTML(history){
@@ -738,7 +767,7 @@
     if(!['body','strength','diet','settings'].includes(dataTab)) dataTab='body';
     const body=lastBody(), avg=sevenDayAvgWeight();
     main.innerHTML=`
-      <div class="page-title">我的</div><div class="page-subtitle">身体数据、力量趋势、饮食推荐和设置。</div>
+      ${pageIntro('我的','身体数据、力量趋势、饮食推荐和设置。')}
       <div class="tabs"><button class="tab ${dataTab==='body'?'active':''}" data-mine-tab="body">身体数据</button><button class="tab ${dataTab==='strength'?'active':''}" data-mine-tab="strength">力量趋势</button><button class="tab ${dataTab==='diet'?'active':''}" data-mine-tab="diet">饮食</button><button class="tab ${dataTab==='settings'?'active':''}" data-mine-tab="settings">设置</button></div>
       <div id="mine-content"></div>`;
     document.querySelectorAll('[data-mine-tab]').forEach(b=>b.onclick=()=>{dataTab=b.dataset.mineTab;renderMine();});
@@ -751,21 +780,82 @@
     } else if(dataTab==='strength'){
       const stats=strengthStats(); c.innerHTML=stats.length?`<div class="list">${stats.map(s=>`<button class="list-item" style="width:100%;text-align:left" data-strength="${s.id}"><div class="grow"><strong>${esc(s.name)}</strong><small>${s.sessions} 次训练记录</small></div><strong>${s.bestWeight} kg</strong></button>`).join('')}</div>`:'<div class="card empty">完成训练后自动生成力量趋势。</div>';document.querySelectorAll('[data-strength]').forEach(b=>b.onclick=()=>showStrength(b.dataset.strength));
     } else if(dataTab==='diet'){
-      c.innerHTML=`<div class="card"><div class="tabs"><button class="tab ${dietMode==='training'?'active':''}" data-diet="training">训练日</button><button class="tab ${dietMode==='rest'?'active':''}" data-diet="rest">休息日</button></div>${dietHTML(dietMode)}</div>`;document.querySelectorAll('[data-diet]').forEach(b=>b.onclick=()=>{dietMode=b.dataset.diet;state.settings.dietMode=dietMode;saveState();renderMine();});document.getElementById('shuffle-diet').onclick=()=>{dietBatch=(dietBatch+1)%DIET_MENUS.length;renderMine();};
+      c.innerHTML=`<div class="card"><div class="tabs diet-tabs"><button class="tab ${dietMode==='training'?'active':''}" data-diet="training">训练日</button><button class="tab ${dietMode==='rest'?'active':''}" data-diet="rest">休息日</button><button class="tab ${dietMode==='cheat'?'active':''}" data-diet="cheat">放纵餐</button></div>${dietHTML(dietMode)}</div>`;document.querySelectorAll('[data-diet]').forEach(b=>b.onclick=()=>{dietMode=b.dataset.diet;dietBatch=0;state.settings.dietMode=dietMode;saveState();renderMine();});document.getElementById('shuffle-diet').onclick=()=>{const size=dietMode==='cheat'?CHEAT_MENUS.length:(dietMode==='rest'?REST_DIET_MENUS.length:DIET_MENUS.length);dietBatch=(dietBatch+1)%size;renderMine();};
     } else {
-      c.innerHTML=`<section class="section"><div class="card"><div class="stat-row"><span>默认组间休息</span><button class="pill blue" id="rest-setting">${state.settings.restSeconds} 秒</button></div><div class="stat-row"><span>训练记录</span><strong>${state.workouts.length} 次</strong></div><div class="stat-row"><span>数据保存</span><strong>本机保存</strong></div></div></section><div class="backup-grid"><button class="primary-btn" id="export-btn">一键备份</button><button class="secondary-btn neutral" id="import-btn">一键恢复</button></div><input id="import-file" type="file" accept="application/json,.json" hidden><div class="note" style="margin-top:12px">数据保存在当前手机。建议每周或重要训练后点一次“一键备份”，换手机或清理浏览器数据后可用备份文件一键恢复。</div>`;document.getElementById('rest-setting').onclick=showRestSetting;document.getElementById('export-btn').onclick=exportData;document.getElementById('import-btn').onclick=()=>document.getElementById('import-file').click();document.getElementById('import-file').onchange=e=>importDataFile(e.target.files?.[0]);
+      c.innerHTML=`<section class="section"><div class="card"><div class="stat-row"><span>默认组间休息</span><button class="pill blue" id="rest-setting">${state.settings.restSeconds} 秒</button></div><div class="stat-row"><span>训练记录</span><strong>${state.workouts.length} 次</strong></div><div class="stat-row"><span>数据保存</span><strong>本机保存</strong></div></div></section><div class="backup-grid"><button class="backup-action" id="export-btn">一键备份</button><button class="backup-action" id="import-btn">一键恢复</button></div><input id="import-file" type="file" accept="application/json,.json" hidden><div class="note" style="margin-top:12px">数据保存在当前手机。建议每周或重要训练后点一次“一键备份”，换手机或清理浏览器数据后可用备份文件一键恢复。</div>`;document.getElementById('rest-setting').onclick=showRestSetting;document.getElementById('export-btn').onclick=exportData;document.getElementById('import-btn').onclick=()=>document.getElementById('import-file').click();document.getElementById('import-file').onchange=e=>importDataFile(e.target.files?.[0]);
     }
     if(c && !c.innerHTML.trim()){dataTab='body';setTimeout(()=>{if(page==='mine')renderMine();},0);}
   }
 
-  const DIET_MENUS=[
-    {breakfast:'鸡蛋2个 + 燕麦牛奶碗 + 香蕉',lunch:'黑椒鸡腿饭 + 西兰花胡萝卜',snack:'希腊酸奶 + 香蕉/饭团',dinner:'番茄牛肉饭 + 清炒时蔬'},
-    {breakfast:'全麦吐司鸡蛋三明治 + 牛奶',lunch:'照烧鸡胸饭 + 菠菜菌菇',snack:'酸奶 + 面包 + 乳清（蛋白不足时）',dinner:'清蒸鱼 + 米饭 + 炒青菜'},
-    {breakfast:'燕麦鸡蛋饼 + 牛奶 + 苹果',lunch:'土豆炖牛肉 + 米饭 + 生菜',snack:'香蕉 + 无糖酸奶',dinner:'虾仁炒蛋 + 米饭 + 西兰花'},
-    {breakfast:'鸡蛋2个 + 豆浆 + 全麦面包 + 香蕉',lunch:'香煎牛排/瘦牛肉 + 米饭 + 彩椒',snack:'饭团 + 牛奶',dinner:'鸡胸肉意面 + 大份蔬菜'}
+  const TRAINING_BREAKFASTS=['鸡蛋2个 + 燕麦牛奶碗 + 香蕉','全麦吐司鸡蛋三明治 + 牛奶 + 蓝莓','燕麦鸡蛋饼 + 无糖酸奶 + 苹果','鸡蛋2个 + 豆浆 + 全麦面包 + 香蕉','牛肉蔬菜卷饼 + 牛奶','鸡丝粥 + 水煮蛋2个 + 玉米','低脂火腿贝果 + 希腊酸奶','虾仁鸡蛋面 + 一份水果'];
+  const TRAINING_LUNCHES=['黑椒鸡腿饭 + 西兰花胡萝卜','照烧鸡胸饭 + 菠菜菌菇','土豆炖牛肉 + 米饭 + 生菜','香煎牛排饭 + 彩椒芦笋','番茄牛腩饭 + 清炒菜心','咖喱鸡肉饭 + 水煮青菜','虾仁滑蛋饭 + 凉拌黄瓜','三文鱼杂粮饭 + 西兰花','青椒牛肉盖饭 + 菌菇','鸡胸肉意面 + 蔬菜沙拉','瘦肉豆腐煲 + 米饭 + 时蔬','清蒸鱼 + 米饭 + 蒜蓉生菜'];
+  const TRAINING_SNACKS=['香蕉 + 希腊酸奶','饭团 + 牛奶','全麦面包 + 乳清蛋白','香蕉 + 花生酱吐司','低脂酸奶 + 麦片 + 蓝莓','玉米 + 鸡蛋 + 无糖豆浆','贝果半个 + 牛奶','苹果 + 酸奶 + 一小把坚果'];
+  const TRAINING_DINNERS=['番茄牛肉饭 + 清炒时蔬','清蒸鱼 + 米饭 + 炒青菜','虾仁炒蛋 + 米饭 + 西兰花','鸡胸肉意面 + 大份蔬菜','黑椒牛柳饭 + 芦笋','照烧三文鱼 + 土豆泥 + 沙拉','冬瓜虾仁汤 + 瘦肉炒饭','香菇滑鸡饭 + 菜心','牛肉荞麦面 + 青菜','鸡腿肉藜麦饭 + 烤蔬菜','番茄鸡蛋牛肉面 + 凉拌菠菜','豆腐蒸肉饼 + 米饭 + 菌菇'];
+  const REST_BREAKFASTS=['鸡蛋2个 + 无糖酸奶 + 蓝莓','牛奶燕麦碗 + 坚果 + 苹果','全麦吐司鸡蛋三明治 + 黑咖啡','豆浆 + 水煮蛋2个 + 小份玉米','虾仁蒸蛋 + 紫薯','希腊酸奶水果碗 + 鸡蛋2个','牛肉蔬菜卷 + 无糖豆浆','鸡胸肉生菜三明治 + 牛奶'];
+  const REST_LUNCHES=['清蒸鱼 + 半碗米饭 + 大份蔬菜','香煎鸡腿肉 + 杂粮饭 + 西兰花','番茄炖牛腩 + 菌菇青菜','虾仁豆腐煲 + 半碗米饭','黑椒牛肉 + 彩椒 + 小份土豆','鸡胸肉荞麦面 + 大份青菜','三文鱼沙拉 + 南瓜','瘦肉炒菌菇 + 杂粮饭','冬瓜排骨汤 + 凉拌蔬菜','清炒虾仁 + 蒸蛋 + 小份米饭','牛肉豆腐锅 + 生菜','白切鸡 + 糙米饭 + 菜心'];
+  const REST_SNACKS=['无糖酸奶 + 蓝莓','牛奶 + 水煮蛋','苹果 + 一小把坚果','乳清蛋白 + 无糖豆浆','低脂奶酪 + 小番茄','希腊酸奶 + 奇异果','鸡蛋 + 黄瓜条','毛豆 + 无糖茶'];
+  const REST_DINNERS=['虾仁炒蛋 + 西兰花 + 小份米饭','清蒸鲈鱼 + 菌菇青菜','鸡胸肉沙拉 + 烤南瓜','番茄牛肉汤 + 炒时蔬','香煎三文鱼 + 芦笋','豆腐蒸肉饼 + 凉拌菠菜','鸡腿肉炒彩椒 + 菜花','牛肉荞麦面 + 双份青菜','虾仁冬瓜汤 + 蒸蛋','瘦肉菌菇煲 + 生菜','白灼虾 + 豆腐 + 时蔬','鸡胸肉蔬菜卷 + 无糖酸奶'];
+  function buildDietMenus(breakfasts,lunches,snacks,dinners,count=32){return Array.from({length:count},(_,i)=>({breakfast:breakfasts[i%breakfasts.length],lunch:lunches[(i*5+1)%lunches.length],snack:snacks[(i*3+2)%snacks.length],dinner:dinners[(i*7+3)%dinners.length]}));}
+  const DIET_MENUS=buildDietMenus(TRAINING_BREAKFASTS,TRAINING_LUNCHES,TRAINING_SNACKS,TRAINING_DINNERS);
+  const REST_DIET_MENUS=buildDietMenus(REST_BREAKFASTS,REST_LUNCHES,REST_SNACKS,REST_DINNERS);
+  const CHEAT_MENUS=[
+    {name:'重庆火锅局',main:'麻辣牛油锅 + 肥牛卷 + 鲜毛肚 + 虾滑 + 嫩牛肉',side:'土豆片、贡菜、豆皮、菌菇拼盘',treat:'冰粉或红糖糍粑 + 冰镇酸梅汤'},
+    {name:'炸鸡汉堡快乐餐',main:'双层芝士牛肉堡 + 香辣炸鸡翅',side:'海盐薯条 + 玉米杯或蔬菜沙拉',treat:'香草冰淇淋或奶昔'},
+    {name:'披萨意面组合',main:'榴莲披萨或超级至尊披萨 + 黑椒牛柳意面',side:'烤鸡翅 + 凯撒沙拉',treat:'提拉米苏 + 冰柠檬茶'},
+    {name:'韩式烤肉大餐',main:'五花肉 + 牛肋条 + 调味牛肉 + 芝士烤鸡',side:'石锅拌饭、泡菜、烤蘑菇和生菜',treat:'韩式刨冰或香蕉牛奶'},
+    {name:'日式烧肉寿司',main:'和牛烧肉拼盘 + 三文鱼寿司 + 鳗鱼饭',side:'天妇罗、味噌汤、海藻沙拉',treat:'抹茶大福或北海道冰淇淋'},
+    {name:'川湘下饭菜',main:'水煮牛肉 + 辣子鸡 + 小炒黄牛肉',side:'干锅花菜 + 一大碗米饭',treat:'桂花酒酿小圆子或冰豆花'},
+    {name:'广式茶点畅吃',main:'虾饺 + 烧卖 + 叉烧包 + 豉汁蒸排骨',side:'干炒牛河或腊味煲仔饭',treat:'杨枝甘露 + 蛋挞'},
+    {name:'东北烧烤夜宵',main:'羊肉串 + 牛肉串 + 烤鸡翅 + 烤生蚝',side:'烤茄子、烤韭菜、炒方便面',treat:'冰汽水 + 烤面包片'},
+    {name:'经典西餐大餐',main:'黑椒肉眼牛排 + 奶油培根意面',side:'焗土豆泥 + 蒜香面包 + 时蔬',treat:'熔岩巧克力蛋糕'},
+    {name:'港式烧味甜品',main:'蜜汁叉烧 + 烧鸭 + 油鸡三拼饭',side:'咖喱鱼蛋 + 椒盐鱿鱼',treat:'双皮奶或芒果西米露'},
+    {name:'潮汕牛肉火锅',main:'吊龙 + 五花趾 + 匙仁 + 手打牛肉丸',side:'粿条、炸腐皮、生菜和白萝卜',treat:'普宁豆干 + 冰柠茶'},
+    {name:'北京烤鸭宴',main:'烤鸭半只 + 荷叶饼 + 甜面酱',side:'鸭架椒盐或鸭架汤 + 京酱肉丝',treat:'驴打滚或豌豆黄'},
+    {name:'新疆大盘鸡',main:'大盘鸡 + 宽皮带面',side:'烤羊肉串 + 凉拌皮辣红',treat:'新疆酸奶 + 哈密瓜'},
+    {name:'云南菌子锅',main:'土鸡菌菇火锅 + 牛肝菌炒饭',side:'包浆豆腐 + 凉拌米线',treat:'泡鲁达或鲜花饼'},
+    {name:'贵州酸汤鱼',main:'酸汤江团鱼 + 肥牛',side:'豆腐、土豆、娃娃菜和米饭',treat:'糍粑冰粉'},
+    {name:'海南椰子鸡',main:'椰子鸡锅 + 文昌鸡',side:'煲仔饭、马蹄、竹荪和蔬菜',treat:'清补凉'},
+    {name:'泰式海鲜盛宴',main:'冬阴功海鲜锅 + 咖喱蟹',side:'菠萝炒饭 + 炭烤猪颈肉',treat:'芒果糯米饭 + 泰式奶茶'},
+    {name:'越南街头风味',main:'火车头牛肉河粉 + 香茅烤肉',side:'越南春卷 + 甘蔗虾',treat:'滴漏咖啡或椰子咖啡'},
+    {name:'新加坡南洋餐',main:'海南鸡饭 + 黑胡椒螃蟹',side:'叻沙 + 咖椰吐司',treat:'斑斓蛋糕 + 薏米水'},
+    {name:'马来西亚肉骨茶',main:'肉骨茶 + 干锅肉骨茶',side:'油条、卤豆腐和鸡油饭',treat:'白咖啡 + 榴莲泡芙'},
+    {name:'印度咖喱大餐',main:'黄油鸡咖喱 + 烤羊排',side:'蒜香烤饼 + 印度香米饭',treat:'芒果拉西 + 印度奶球'},
+    {name:'墨西哥塔可派对',main:'牛肉塔可 + 芝士鸡肉卷饼',side:'玉米片配鳄梨酱 + 墨西哥辣味饭',treat:'肉桂吉事果'},
+    {name:'美式烟熏烧烤',main:'烟熏牛胸肉 + 烤猪肋排',side:'通心粉芝士 + 薯角 + 凉拌卷心菜',treat:'苹果派 + 可乐'},
+    {name:'德式烤猪肘',main:'脆皮烤猪肘 + 德式香肠拼盘',side:'酸菜、土豆泥和黑麦面包',treat:'黑森林蛋糕'},
+    {name:'西班牙海鲜饭',main:'藏红花海鲜饭 + 伊比利亚火腿',side:'蒜香虾 + 西班牙土豆蛋饼',treat:'巴斯克芝士蛋糕'},
+    {name:'法式小酒馆',main:'红酒炖牛肉 + 香煎鸭胸',side:'奶油焗土豆 + 法棍',treat:'焦糖布丁'},
+    {name:'意式肉酱盛宴',main:'千层面 + 松露蘑菇披萨',side:'炸鱿鱼圈 + 芝士焗饭',treat:'开心果冰淇淋'},
+    {name:'土耳其烤肉拼盘',main:'烤羊肉 + 烤牛肉 + 鸡肉沙威玛',side:'皮塔饼、鹰嘴豆泥和烤蔬菜',treat:'土耳其米布丁'},
+    {name:'希腊海边餐',main:'烤羊排 + 海鲜烩饭',side:'希腊沙拉 + 皮塔饼配酸奶黄瓜酱',treat:'蜂蜜坚果酸奶'},
+    {name:'俄式暖胃餐',main:'俄式炖牛肉 + 奶油蘑菇鸡',side:'红菜汤 + 土豆饼',treat:'蜂蜜蛋糕'},
+    {name:'大阪街头小吃',main:'大阪烧 + 章鱼烧 + 炒面',side:'炸串拼盘 + 玉子烧',treat:'抹茶圣代'},
+    {name:'日式拉面套餐',main:'豚骨叉烧拉面 + 溏心蛋',side:'煎饺 + 炸鸡块',treat:'草莓大福'},
+    {name:'日式咖喱炸物',main:'厚切炸猪排咖喱饭',side:'可乐饼 + 唐扬鸡块 + 卷心菜丝',treat:'红豆鲷鱼烧'},
+    {name:'韩式部队锅',main:'芝士部队锅 + 辛拉面',side:'海鲜煎饼 + 炸紫菜卷',treat:'年糕华夫饼 + 梨汁'},
+    {name:'韩式炸鸡双拼',main:'蜂蜜芥末炸鸡 + 甜辣炸鸡',side:'芝士年糕 + 鱼饼汤',treat:'雪花冰'},
+    {name:'湘西烧烤小龙虾',main:'蒜蓉小龙虾 + 麻辣小龙虾',side:'烤排骨、烤牛油和炒米粉',treat:'冰镇绿豆沙'},
+    {name:'江浙本帮菜',main:'红烧肉 + 油爆虾 + 腌笃鲜',side:'葱油拌面 + 酒香草头',treat:'桂花糖藕'},
+    {name:'南京鸭血粉丝',main:'全套鸭血粉丝汤 + 锅贴',side:'盐水鸭 + 鸭油烧饼',treat:'梅花糕'},
+    {name:'武汉过早组合',main:'热干面 + 三鲜豆皮 + 牛肉粉',side:'面窝 + 糯米鸡',treat:'米酒蛋花'},
+    {name:'西安碳水盛宴',main:'肉夹馍 + 油泼面 + 羊肉泡馍',side:'凉皮 + 烤肉串',treat:'冰峰汽水 + 桂花糕'},
+    {name:'兰州牛肉面',main:'加肉加蛋牛肉面 + 大宽面',side:'手抓羊肉 + 凉拌牛腱',treat:'甜醅子奶茶'},
+    {name:'河南烩面水席',main:'羊肉烩面 + 锅贴',side:'小酥肉 + 洛阳燕菜',treat:'杏仁茶'},
+    {name:'山东鲁菜硬菜',main:'九转大肠 + 糖醋鲤鱼 + 葱烧海参',side:'鲅鱼水饺',treat:'拔丝地瓜'},
+    {name:'福建海味宴',main:'佛跳墙 + 海蛎煎 + 荔枝肉',side:'沙茶面 + 五香卷',treat:'花生汤 + 芋泥'},
+    {name:'台湾夜市套餐',main:'大鸡排 + 卤肉饭 + 蚵仔煎',side:'盐酥鸡 + 炸甜不辣',treat:'珍珠奶茶 + 凤梨酥'},
+    {name:'澳门葡式风味',main:'葡国鸡 + 非洲鸡 + 猪扒包',side:'咖喱鱼蛋 + 焗饭',treat:'葡式蛋挞 + 木糠布甸'},
+    {name:'成都串串香',main:'牛肉串串 + 掌中宝 + 郡肝 + 脑花',side:'冒菜、苕粉和蛋炒饭',treat:'红糖冰粉'},
+    {name:'螺蛳粉加满料',main:'加腐竹、鸭脚、卤蛋和炸蛋的螺蛳粉',side:'炸猪脚 + 凉拌木耳',treat:'冰豆浆'},
+    {name:'长沙夜宵局',main:'口味虾 + 臭豆腐 + 糖油粑粑',side:'小炒黄牛肉 + 猪油拌粉',treat:'紫苏桃子姜'},
+    {name:'甜品下午茶',main:'草莓奶油蛋糕 + 可颂三明治',side:'巴斯克芝士蛋糕 + 马卡龙',treat:'焦糖拿铁或厚乳奶茶'}
   ];
   function dietHTML(mode){
-    const d=DIET[mode], menu=DIET_MENUS[dietBatch%DIET_MENUS.length];
+    if(mode==='cheat'){
+      const menu=CHEAT_MENUS[dietBatch%CHEAT_MENUS.length];
+      return `<div class="small muted">今天想吃点好的</div><div class="cheat-hero"><span>本次推荐</span><strong>${esc(menu.name)}</strong></div><div class="section-head" style="margin-top:18px"><strong>具体放纵餐推荐</strong><button class="section-link" id="shuffle-diet">换一批</button></div>${[['主角',menu.main],['搭配',menu.side],['甜品/饮品',menu.treat]].map(([n,t])=>`<div class="meal"><strong>${n}</strong><p>${esc(t)}</p></div>`).join('')}<div class="note" style="margin-top:12px">放纵餐按一顿来享受就好，挑自己真正想吃的，不需要为了“补偿”额外挨饿或疯狂加练。</div>`;
+    }
+    const d=DIET[mode],menus=mode==='rest'?REST_DIET_MENUS:DIET_MENUS,menu=menus[dietBatch%menus.length];
     return `<div class="small muted">${d.label}目标</div><div class="diet-macro"><div><strong>${d.kcal}</strong><small>kcal</small></div><div><strong>${d.protein}g</strong><small>蛋白质</small></div><div><strong>${d.fat}g</strong><small>脂肪</small></div><div><strong>${d.carbs}g</strong><small>碳水</small></div></div>
       <div class="section-head" style="margin-top:18px"><strong>今日具体饮食推荐</strong><button class="section-link" id="shuffle-diet">换一批</button></div>
       ${[['早餐',menu.breakfast],['午餐',menu.lunch],['训练前/加餐',menu.snack],['晚餐',menu.dinner]].map(([n,t])=>`<div class="meal"><strong>${n}</strong><p>${t}</p></div>`).join('')}
@@ -991,23 +1081,21 @@
   }
 
   let activeVideoStage=null;
-  function videoScreenControlsHTML(){return `<div class="video-screen-controls" aria-label="视频全屏控制"><button type="button" data-video-screen="portrait" aria-label="竖屏全屏" title="竖屏全屏"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M10 6h4M10 18h4"/></svg></button><button type="button" data-video-screen="landscape" aria-label="强制全屏" title="强制全屏"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg></button></div>`;}
+  function videoScreenControlsHTML(){return `<div class="video-screen-controls" aria-label="视频全屏控制"><button type="button" data-video-screen aria-label="全屏播放" title="全屏播放"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg></button></div>`;}
   async function exitVideoFullscreen(requestExit=true){
     const stage=activeVideoStage;activeVideoStage=null;
-    if(stage){stage.classList.remove('video-force-fullscreen','is-portrait','is-landscape');delete stage.dataset.screenMode;}
+    if(stage)stage.classList.remove('video-force-fullscreen');
     document.body.classList.remove('video-fullscreen-open');
-    try{if(screen.orientation?.unlock)screen.orientation.unlock();}catch(e){}
     if(requestExit){try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen();else if(document.webkitFullscreenElement&&document.webkitExitFullscreen)document.webkitExitFullscreen();}catch(e){}}
   }
-  async function enterVideoFullscreen(stage,mode){
+  async function enterVideoFullscreen(stage){
     if(!stage)return;
-    if(activeVideoStage===stage&&stage.dataset.screenMode===mode){await exitVideoFullscreen();return;}
+    if(activeVideoStage===stage){await exitVideoFullscreen();return;}
     if(activeVideoStage&&activeVideoStage!==stage)await exitVideoFullscreen();
-    activeVideoStage=stage;stage.dataset.screenMode=mode;stage.classList.remove('is-portrait','is-landscape');stage.classList.add('video-force-fullscreen',mode==='portrait'?'is-portrait':'is-landscape');document.body.classList.add('video-fullscreen-open');
+    activeVideoStage=stage;stage.classList.add('video-force-fullscreen');document.body.classList.add('video-fullscreen-open');
     try{if(!document.fullscreenElement&&!document.webkitFullscreenElement){if(stage.requestFullscreen)await stage.requestFullscreen({navigationUI:'hide'});else if(stage.webkitRequestFullscreen)stage.webkitRequestFullscreen();}}catch(e){}
-    try{if(screen.orientation?.lock)await screen.orientation.lock(mode==='portrait'?'portrait':'landscape');}catch(e){}
   }
-  function bindVideoScreenControls(stage){stage.querySelectorAll('[data-video-screen]').forEach(btn=>btn.onclick=e=>{e.preventDefault();e.stopPropagation();enterVideoFullscreen(stage,btn.dataset.videoScreen);});}
+  function bindVideoScreenControls(stage){stage.querySelectorAll('[data-video-screen]').forEach(btn=>btn.onclick=e=>{e.preventDefault();e.stopPropagation();enterVideoFullscreen(stage);});}
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&activeVideoStage)exitVideoFullscreen(false);});
   document.addEventListener('webkitfullscreenchange',()=>{if(!document.webkitFullscreenElement&&!document.fullscreenElement&&activeVideoStage)exitVideoFullscreen(false);});
 
@@ -1108,5 +1196,7 @@
   modal.addEventListener('click',e=>{ if(e.target===modal)closeModal(); });
 
   if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&page==='home')renderHome();});
+  scheduleDateRefresh();
   render();
 })();
