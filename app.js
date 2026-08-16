@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '2.7';
+  const VERSION = '2.8';
 
   const EXERCISES = [
     {id:'bench_press',name:'杠铃卧推',group:'胸',equipment:'杠铃',muscles:['胸','三头','肩'],primary:'胸大肌',secondary:'肱三头肌、三角肌前束',tips:['肩胛骨向后下方收紧并稳定贴住凳面','双脚踩稳地面，保持躯干稳定','杠铃下降至胸部附近后平稳推起，不要弹胸'],mistakes:['肩膀前顶、肩胛失去稳定','手腕过度后折','为了重量牺牲下放控制'],rest:'2–3 分钟'},
@@ -294,7 +294,81 @@
   const GYM_DIRECT={bench_press:'videos/0025-EIeI8Vf.gif',back_squat:'videos/0043-qXTaZnJ.gif',pullup:'videos/0652-lBDjFxJ.gif',lateral_raise:'videos/0334-DsgkuIt.gif',db_shoulder_press:'videos/0405-znQUdHY.gif',reverse_pec_deck:'videos/0602-myfUsKf.gif',elliptical:'videos/2141-rjtuP6X.gif',sit_up:'videos/0001-2gPfomN.gif',machine_crunch:'videos/1452-Wgaz7pm.gif',barbell_shoulder_press:'videos/1457-Kyd9Rz5.gif',assisted_pullup:'videos/0017-kiJ4Z2K.gif',leg_raise:'videos/0620-WhuFnR7.gif',lying_leg_raise:'videos/0620-WhuFnR7.gif',goblet_squat:'videos/1760-yn8yg1r.gif',leg_extension:'videos/0585-my33uHU.gif',face_pull:'videos/0233-ZfyAGhK.gif',lat_pulldown:'videos/0197-qdRxqCj.gif',incline_twist_crunch:'videos/0495-9ZGZuOD.gif',hammer_one_arm_row:'videos/1356-OIFMAp1.gif'};
   const GYM_GROUP_FALLBACK={胸:'videos/0025-EIeI8Vf.gif',背:'videos/0652-lBDjFxJ.gif',肩:'videos/0334-DsgkuIt.gif',腿:'videos/0043-qXTaZnJ.gif',臀:'videos/0043-qXTaZnJ.gif',二头:'videos/0405-znQUdHY.gif',三头:'videos/0025-EIeI8Vf.gif',腹:'videos/0001-2gPfomN.gif',小腿:'videos/0043-qXTaZnJ.gif',有氧:'videos/2141-rjtuP6X.gif'};
   const GYM_MAP_KEY='train-log-gym-media-map-v27';let persistedGymMap={};try{persistedGymMap=JSON.parse(localStorage.getItem(GYM_MAP_KEY)||'{}')||{};}catch(e){}const saveGymMap=()=>{try{localStorage.setItem(GYM_MAP_KEY,JSON.stringify(persistedGymMap));}catch(e){}};
-  const VIDEO_MAP={};
+  const VIDEO_MAP={
+    bench_press:{bvid:'BV1zv4y1V7ks',author:'ALEX健身频道',duration:624,title:'杠铃卧推（详细教程）'},
+    incline_db_press:{bvid:'BV1Dg4y1d75K',author:'ALEX健身频道',duration:562,title:'上斜哑铃卧推'},
+    incline_machine_press:{bvid:'BV1di42197hF',author:'ALEX健身频道',duration:391,title:'上斜器械推胸'},
+    pec_deck:{bvid:'BV1Lg4y1A7tY',author:'ALEX健身频道',duration:568,title:'坐姿蝴蝶机夹胸'},
+    cable_fly:{bvid:'BV1W8411Y7Nx',author:'ALEX健身频道',duration:607,title:'龙门架绳索夹胸'},
+    triceps_pushdown:{bvid:'BV1fjMyzZEt5',author:'ALEX健身频道',duration:405,title:'肱三头肌绳索下压'},
+    overhead_triceps:{bvid:'BV1wm6dBFEd8',author:'ALEX健身频道',duration:341,title:'过头臂屈伸'},
+    lateral_raise:{bvid:'BV1n8411j7uE',author:'ALEX健身频道',duration:787,title:'哑铃侧平举'},
+    pullup:{bvid:'BV1TG4y1F7m1',author:'ALEX健身频道',duration:472,title:'引体向上'},
+    lat_pulldown:{bvid:'BV1oa4y1z73J',author:'ALEX健身频道',duration:336,title:'高位下拉'},
+    machine_row:{bvid:'BV1m2421L7tw',author:'ALEX健身频道',duration:454,title:'器械坐姿划船'},
+    cable_row:{bvid:'BV1y14y1X7by',author:'ALEX健身频道',duration:639,title:'坐姿绳索划船'},
+    reverse_pec_deck:{bvid:'BV1huHNzMEhC',author:'大志的健身课堂',duration:101,title:'蝴蝶机反向飞鸟'},
+    barbell_curl:{bvid:'BV1dP4y1D7Uc',author:'ALEX健身频道',duration:579,title:'杠铃弯举'},
+    hammer_curl:{bvid:'BV19a4y1q7Q3',author:'UP健身',duration:25,title:'哑铃锤式弯举'},
+    smith_shoulder_press:{bvid:'BV1eV4y1h74Y',author:'ALEX健身频道',duration:582,title:'史密斯推肩'},
+    reverse_fly:{bvid:'BV1Sy421i79H',author:'ALEX健身频道',duration:440,title:'哑铃俯身反向飞鸟'},
+    hack_squat:{bvid:'BV13j411B7Xu',author:'ALEX健身频道',duration:533,title:'哈克深蹲'},
+    rdl:{bvid:'BV1Zt421g7p5',author:'凯圣王',duration:691,title:'罗马尼亚硬拉'},
+    leg_curl:{bvid:'BV1Hx4y1Y7TN',author:'ALEX健身频道',duration:478,title:'腿弯举'},
+    calf_raise:{bvid:'BV1N7411i7Jq',author:'FE健身干货百科书',duration:315,title:'小腿提踵训练'},
+    hanging_leg_raise:{bvid:'BV1A22EY7Eog',author:'ALEX健身频道',duration:254,title:'悬垂举腿'},
+    cable_crunch:{bvid:'BV1jxc1e2ELU',author:'ALEX健身频道',duration:401,title:'龙门架绳索卷腹'},
+    incline_press_any:{bvid:'BV1ip4y1N7tG',author:'ALEX健身频道',duration:351,title:'上斜卧推'},
+    machine_press:{bvid:'BV1AC411x7np',author:'ALEX健身频道',duration:346,title:'器械坐姿推胸'},
+    pulldown_any:{bvid:'BV1oa4y1z73J',author:'ALEX健身频道',duration:336,title:'引体向上／高位下拉参考'},
+    bulgarian_split_squat:{bvid:'BV12M411L7k8',author:'ALEX健身频道',duration:541,title:'保加利亚分腿蹲'},
+    biceps_curl:{bvid:'BV1anmCYNEbK',author:'ALEX健身频道',duration:495,title:'哑铃二头弯举'},
+    triceps_pressdown:{bvid:'BV1fjMyzZEt5',author:'ALEX健身频道',duration:405,title:'三头绳索下压'},
+    crunch_combo:{bvid:'BV1WD421G7Lb',author:'跟练健身Online',duration:86,title:'仰卧两头起 V-Up'},
+    front_raise:{bvid:'BV1hZ421N7aE',author:'ALEX健身频道',duration:523,title:'杠铃前平举'},
+    barbell_shoulder_press:{bvid:'BV1iG411e7xW',author:'ALEX健身频道',duration:579,title:'杠铃推肩'},
+    shrug:{bvid:'BV1FV411m7aT',author:'豹哥健身',duration:355,title:'杠铃耸肩'},
+    flat_db_press:{bvid:'BV1LM411z7sS',author:'ALEX健身频道',duration:740,title:'平板哑铃卧推'},
+    decline_press:{bvid:'BV1HXXsBBEiE',author:'凯圣王',duration:933,title:'下斜卧推'},
+    chest_dip:{bvid:'BV1bL411Z7RU',author:'FitMen六六',duration:64,title:'双杠臂屈伸（胸）'},
+    deadlift:{bvid:'BV1MA411U7Cn',author:'ALEX健身频道',duration:505,title:'传统硬拉'},
+    barbell_row:{bvid:'BV17Y4y1Q7PJ',author:'ALEX健身频道',duration:529,title:'杠铃俯身划船'},
+    one_arm_db_row:{bvid:'BV1mzZiYNEjj',author:'大志的健身课堂',duration:117,title:'单臂哑铃划船'},
+    tbar_row:{bvid:'BV1bG4y1J7mj',author:'ALEX健身频道',duration:491,title:'T 杠划船'},
+    face_pull:{bvid:'BV1pe41127xk',author:'ALEX健身频道',duration:512,title:'绳索面拉'},
+    arnold_press:{bvid:'BV1xeRoYEE6e',author:'大志的健身课堂',duration:70,title:'阿诺德推举'},
+    upright_row:{bvid:'BV19U4y1a76N',author:'19347978894',duration:27,title:'绳索直立划船'},
+    back_squat:{bvid:'BV1kM411F7G7',author:'ALEX健身频道',duration:690,title:'杠铃深蹲'},
+    leg_press:{bvid:'BV1gs4y167gt',author:'ALEX健身频道',duration:668,title:'腿举／倒蹬'},
+    leg_extension:{bvid:'BV1Pj411y7fy',author:'ALEX健身频道',duration:450,title:'坐姿腿屈伸'},
+    preacher_curl:{bvid:'BV1GN4y1Q75g',author:'ALEX健身频道',duration:427,title:'牧师凳弯举'},
+    cable_curl:{bvid:'BV1vm421p749',author:'ALEX健身频道',duration:357,title:'绳索弯举'},
+    skull_crusher:{bvid:'BV1pD421H7zw',author:'凯圣王',duration:626,title:'仰卧臂屈伸'},
+    close_grip_bench:{bvid:'BV14m421E71T',author:'凯圣王',duration:589,title:'窄握卧推'},
+    plank:{bvid:'BV14w411V7Yj',author:'凯圣王',duration:330,title:'平板支撑'},
+    wrist_curl:{bvid:'BV1vb411A7c3',author:'掰手腕的废柴大叔',duration:62,title:'腕弯举'},
+    treadmill_run:{bvid:'BV13L4y1u7fz',author:'跑步的子章老师',duration:331,title:'跑步姿势教学'},
+    incline_walk:{bvid:'BV14u4m1M7d3',author:'叶的冒险',duration:58,title:'跑步机爬坡走'},
+    elliptical:{bvid:'BV11t411w78E',author:'健身教练刘远',duration:148,title:'椭圆机正确使用方法'},
+    stationary_bike:{bvid:'BV1fos5etEAE',author:'YPOO易跑',duration:1250,title:'动感单车新手教学'},
+    stair_climber:{bvid:'BV1FJkJB8ELG',author:'梅川芝士',duration:155,title:'爬楼机使用指南'},
+    db_shoulder_press:{bvid:'BV1Z841187pJ',author:'ALEX健身频道',duration:751,title:'哑铃推肩'},
+    machine_crunch:{bvid:'BV1cGSDYrEP7',author:'ALEX健身频道',duration:403,title:'器械坐姿卷腹'},
+    sit_up:{bvid:'BV1Tt4y1b7CH',author:'不爱笑的白客',duration:46,title:'仰卧起坐'},
+    leg_raise:{bvid:'BV18d4y137pp',author:'唐叔健身',duration:135,title:'抬腿动作讲解'},
+    butterfly_crunch:{bvid:'BV1H2DaYbEpz',author:'略知一二的一二',duration:31,title:'蝴蝶收腹'},
+    lying_leg_raise:{bvid:'BV1R64y1H7Gv',author:'人民的健身教练',duration:47,title:'仰卧抬腿'},
+    incline_twist_crunch:{bvid:'BV1eW411r7Xz',author:'YouthOnem',duration:204,title:'斜板卷腹转体'},
+    weighted_russian_twist:{bvid:'BV16PUSYPEVK',author:'跟练健身Online',duration:101,title:'哑铃负重俄罗斯转体'},
+    hammer_one_arm_row:{bvid:'BV1av4y1n7Kk',author:'健身亮哥668',duration:8,title:'单手悍马机划船'},
+    assisted_pullup:{bvid:'BV16T4y1a7Wh',author:'Oh是Connie呀',duration:107,title:'辅助引体向上'},
+    goblet_squat:{bvid:'BV1TT4y1p7YR',author:'凯圣王',duration:496,title:'哑铃酒杯深蹲'},
+    reverse_hack_squat:{bvid:'BV11k4y127f2',author:'Nikko大宁',duration:133,title:'俯卧反向哈克深蹲'},
+    triceps_rope_overhead:{bvid:'BV1wm6dBFEd8',author:'ALEX健身频道',duration:341,title:'绳索过顶臂屈伸'},
+    triceps_kickback:{bvid:'BV1sw411G7jY',author:'凯圣王',duration:361,title:'哑铃俯身臂屈伸'},
+    bench_dip:{bvid:'BV1jMSYYnE4Q',author:'Ariel_宇',duration:11,title:'凳上臂屈伸'},
+    single_arm_pushdown:{bvid:'BV1nQ4y1K7d5',author:'长风万钧',duration:47,title:'单臂绳索下压'}
+  };
   let gymIndexPromise=null; const gymCache={};
   const DIET = {
     training:{label:'训练日',kcal:2400,protein:150,fat:65,carbs:300},
@@ -366,7 +440,18 @@
     [modalSheet,modalBody,modal].forEach(el=>{if(el){el.scrollTop=0;el.scrollLeft=0;}});
     if(modalSheet?.scrollTo)modalSheet.scrollTo(0,0);
   }
+  function cleanupTutorialMedia(root=modalBody){
+    if(!root)return;
+    root.querySelectorAll('.local-video').forEach(card=>{
+      if(card._timer){clearInterval(card._timer);card._timer=null;}
+    });
+    root.querySelectorAll('iframe.bilibili-player').forEach(frame=>{
+      try{frame.src='about:blank';}catch(e){}
+      frame.remove();
+    });
+  }
   function openModal(title,html){
+    cleanupTutorialMedia();
     modalTitle.textContent=title;
     modalBody.innerHTML=html;
     resetModalScroll();
@@ -374,7 +459,7 @@
     resetModalScroll();
     requestAnimationFrame(()=>{resetModalScroll();hydrateGymVisuals(modalBody);});
   }
-  function closeModal(){ modal.classList.remove('tutorial-mode'); if(modal.open)modal.close(); if(pendingFreeWorkout && state.activeWorkout?.planId===null && !(state.activeWorkout.exercises||[]).length){state.activeWorkout=null;pendingFreeWorkout=false;saveState();if(page==='training')renderTraining();} }
+  function closeModal(){ cleanupTutorialMedia();modal.classList.remove('tutorial-mode'); if(modal.open)modal.close(); if(pendingFreeWorkout && state.activeWorkout?.planId===null && !(state.activeWorkout.exercises||[]).length){state.activeWorkout=null;pendingFreeWorkout=false;saveState();if(page==='training')renderTraining();} }
 
   function setPage(next){ page=next; document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page)); render(); window.scrollTo({top:0,behavior:'instant'}); }
 
@@ -839,31 +924,40 @@
     return `<div class="heatmap-wrap formal v26"><svg viewBox="0 0 1536 1024" class="heatmap-svg" role="img" aria-label="${esc(ex.name)}训练肌群图"><image href="assets/heatmap-neutral-v2.png" x="0" y="0" width="1536" height="1024" preserveAspectRatio="xMidYMid meet"/><g>${shapes}</g>${labelsFor('front')}${labelsFor('back')}</svg><div class="heatmap-legend"><span><i class="red"></i>主要训练肌群</span><span><i class="orange"></i>辅助训练肌群</span><span><i class="gray"></i>非主要肌群</span></div></div>`;
   }
 
+  function formatVideoDuration(seconds){
+    const total=Math.max(0,Number(seconds)||0),hours=Math.floor(total/3600),minutes=Math.floor((total%3600)/60),secs=total%60;
+    return hours?`${hours}:${String(minutes).padStart(2,'0')}:${String(secs).padStart(2,'0')}`:`${minutes}:${String(secs).padStart(2,'0')}`;
+  }
+
   function videoHTML(ex){
-    const tips=(ex.tips||[]).slice(0,3);
-    const dur=Math.max(18,Math.min(42,18+tips.length*6));
-    return `<div class="local-video" data-local-video="${ex.id}" data-duration="${dur}">
+    const video=VIDEO_MAP[ex.id];
+    if(!video)return `<div class="video-unavailable"><strong>暂无对应视频</strong><span>3D 动图、动作要点和常见错误仍可正常查看。</span></div>`;
+    const dur=formatVideoDuration(video.duration);
+    return `<div class="local-video" data-local-video="${ex.id}" data-bvid="${video.bvid}">
       <div class="local-video-stage">
         <div class="local-video-gif">${exerciseVisual(ex)}</div>
         <div class="local-video-shade"></div>
-        <button class="local-video-play" type="button" aria-label="播放中文短视频">▶</button>
-        <div class="local-video-caption"><strong>${esc(ex.name)}</strong><span>${esc(tips[0]||'保持动作稳定，控制节奏')}</span></div>
-        <div class="local-video-time">00:${String(dur).padStart(2,'0')}</div>
+        <button class="local-video-play" type="button" aria-label="播放${esc(ex.name)}中文教学视频">▶</button>
+        <div class="local-video-caption"><strong>${esc(ex.name)}</strong><span>${esc(video.title)}</span></div>
+        <div class="local-video-time">${dur}</div>
       </div>
-      <div class="local-video-note">TRAIN LOG 中文短教学 · ${dur} 秒 · 应用内播放</div>
+      <div class="local-video-note">${esc(video.author)} · ${dur} · 点击播放后加载</div>
     </div>`;
   }
 
   function bindLocalTutorialVideos(root=document){
     root.querySelectorAll('.local-video').forEach(card=>{
-      const btn=card.querySelector('.local-video-play'),cap=card.querySelector('.local-video-caption span'),time=card.querySelector('.local-video-time');
+      const btn=card.querySelector('.local-video-play'),stage=card.querySelector('.local-video-stage');
       if(!btn||btn.dataset.bound)return;btn.dataset.bound='1';
-      const ex=exercise(card.dataset.localVideo),tips=(ex.tips||[]).slice(0,3),total=Number(card.dataset.duration)||24;
-      btn.onclick=()=>{
-        if(card._timer){clearInterval(card._timer);card._timer=null;btn.textContent='▶';card.classList.remove('playing');return;}
-        card.classList.add('playing');btn.textContent='Ⅱ';let left=total,idx=0;if(cap)cap.textContent=tips[0]||'保持动作稳定，控制节奏';if(time)time.textContent=`00:${String(left).padStart(2,'0')}`;
-        card._timer=setInterval(()=>{left--;if(time)time.textContent=`00:${String(Math.max(0,left)).padStart(2,'0')}`;const next=Math.floor((total-left)/(total/Math.max(1,tips.length)));if(tips.length&&next!==idx&&next<tips.length){idx=next;cap.textContent=tips[idx];}if(left<=0){clearInterval(card._timer);card._timer=null;btn.textContent='↻';card.classList.remove('playing');}},1000);
-      };
+      btn.addEventListener('click',()=>{
+        if(card.classList.contains('playing')||!stage)return;
+        const bvid=card.dataset.bvid;
+        if(!/^BV[0-9A-Za-z]{10}$/.test(bvid||'')){toast('视频地址无效');return;}
+        card.classList.add('playing');
+        stage.innerHTML=`<div class="video-loading" aria-live="polite"><span></span>正在加载视频…</div><iframe class="bilibili-player" title="${esc(exercise(card.dataset.localVideo).name)}视频讲解" src="https://player.bilibili.com/player.html?bvid=${encodeURIComponent(bvid)}&page=1&autoplay=1&danmaku=0&high_quality=1" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+        const frame=stage.querySelector('.bilibili-player');
+        frame.addEventListener('load',()=>{stage.querySelector('.video-loading')?.remove();},{once:true});
+      });
     });
   }
 
