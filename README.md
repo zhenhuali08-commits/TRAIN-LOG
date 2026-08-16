@@ -1,4 +1,4 @@
-# TRAIN LOG V2.3 LOCAL
+# TRAIN LOG V3.0 LOCAL
 
 本地无 D1 版本。训练数据使用浏览器本地存储，并提供一键备份/一键恢复。
 
