@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '2.8';
+  const VERSION = '2.9';
 
   const EXERCISES = [
     {id:'bench_press',name:'杠铃卧推',group:'胸',equipment:'杠铃',muscles:['胸','三头','肩'],primary:'胸大肌',secondary:'肱三头肌、三角肌前束',tips:['肩胛骨向后下方收紧并稳定贴住凳面','双脚踩稳地面，保持躯干稳定','杠铃下降至胸部附近后平稳推起，不要弹胸'],mistakes:['肩膀前顶、肩胛失去稳定','手腕过度后折','为了重量牺牲下放控制'],rest:'2–3 分钟'},
@@ -291,7 +291,7 @@
   const GYM_BASE=`https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@${GYM_SHA}`;
   const GYM_DATA_URL=`${GYM_BASE}/data/exercises.json`;
   const GYM_QUERY={bench_press:'barbell bench press',incline_db_press:'dumbbell incline bench press',incline_machine_press:'lever incline chest press',pec_deck:'lever seated fly',cable_fly:'cable middle fly',triceps_pushdown:'cable pushdown',overhead_triceps:'cable overhead triceps extension',lateral_raise:'dumbbell lateral raise',pullup:'pull-up',lat_pulldown:'cable pulldown pro lat bar',machine_row:'lever seated row',cable_row:'cable seated row',reverse_pec_deck:'lever seated reverse fly',barbell_curl:'barbell curl',hammer_curl:'dumbbell hammer curl',smith_shoulder_press:'smith shoulder press',reverse_fly:'dumbbell reverse fly',hack_squat:'sled hack squat',rdl:'barbell romanian deadlift',leg_curl:'lever lying leg curl',calf_raise:'standing calf raise',hanging_leg_raise:'hanging leg raise',cable_crunch:'cable kneeling crunch',incline_press_any:'dumbbell incline bench press',pulldown_any:'cable pulldown pro lat bar',crunch_combo:'crunch',machine_press:'lever chest press',bulgarian_split_squat:'split squat',biceps_curl:'dumbbell biceps curl',triceps_pressdown:'cable pushdown',front_raise:'barbell front raise',barbell_shoulder_press:'barbell standing wide military press',shrug:'dumbbell shrug',flat_db_press:'dumbbell bench press',decline_press:'barbell decline bench press',chest_dip:'chest dip',deadlift:'barbell deadlift',barbell_row:'barbell bent over row',one_arm_db_row:'dumbbell one arm bent-over row',tbar_row:'t-bar row',face_pull:'cable standing rear delt row with rope',arnold_press:'dumbbell arnold press',upright_row:'cable upright row',back_squat:'barbell full squat',leg_press:'sled 45 leg press',leg_extension:'lever leg extension',preacher_curl:'barbell preacher curl',cable_curl:'cable curl',skull_crusher:'barbell lying triceps extension',close_grip_bench:'barbell close-grip bench press',plank:'front plank',wrist_curl:'barbell wrist curl',treadmill_run:'run',incline_walk:'walking on incline treadmill',elliptical:'walk elliptical cross trainer',stationary_bike:'stationary bike run',stair_climber:'walking on stepmill',db_shoulder_press:'dumbbell seated shoulder press',machine_crunch:'lever seated crunch',sit_up:'3/4 sit-up',leg_raise:'lying leg raise flat bench',butterfly_crunch:'3/4 sit-up',lying_leg_raise:'lying leg raise flat bench',incline_twist_crunch:'incline twisting sit-up',weighted_russian_twist:'weighted russian twist',hammer_one_arm_row:'lever one arm lateral high row',assisted_pullup:'assisted pull-up',goblet_squat:'dumbbell goblet squat',reverse_hack_squat:'sled hack squat',triceps_rope_overhead:'cable overhead triceps extension',triceps_kickback:'dumbbell kickback',bench_dip:'bench dip',single_arm_pushdown:'cable one arm tricep pushdown'};
-  const GYM_DIRECT={bench_press:'videos/0025-EIeI8Vf.gif',back_squat:'videos/0043-qXTaZnJ.gif',pullup:'videos/0652-lBDjFxJ.gif',lateral_raise:'videos/0334-DsgkuIt.gif',db_shoulder_press:'videos/0405-znQUdHY.gif',reverse_pec_deck:'videos/0602-myfUsKf.gif',elliptical:'videos/2141-rjtuP6X.gif',sit_up:'videos/0001-2gPfomN.gif',machine_crunch:'videos/1452-Wgaz7pm.gif',barbell_shoulder_press:'videos/1457-Kyd9Rz5.gif',assisted_pullup:'videos/0017-kiJ4Z2K.gif',leg_raise:'videos/0620-WhuFnR7.gif',lying_leg_raise:'videos/0620-WhuFnR7.gif',goblet_squat:'videos/1760-yn8yg1r.gif',leg_extension:'videos/0585-my33uHU.gif',face_pull:'videos/0233-ZfyAGhK.gif',lat_pulldown:'videos/0197-qdRxqCj.gif',incline_twist_crunch:'videos/0495-9ZGZuOD.gif',hammer_one_arm_row:'videos/1356-OIFMAp1.gif'};
+  const GYM_DIRECT={bench_press:'videos/0025-EIeI8Vf.gif',incline_db_press:'videos/0314-ns0SIbU.gif',incline_machine_press:'videos/1299-jHAnWmT.gif',pec_deck:'videos/0596-v3xmPAR.gif',cable_fly:'videos/0188-xLYSdtg.gif',triceps_pushdown:'videos/0201-3ZflifB.gif',overhead_triceps:'videos/0194-2IxROQ1.gif',lateral_raise:'videos/0334-DsgkuIt.gif',pullup:'videos/0652-lBDjFxJ.gif',lat_pulldown:'videos/0197-qdRxqCj.gif',machine_row:'videos/1350-7I6LNUG.gif',cable_row:'videos/0861-fUBheHs.gif',reverse_pec_deck:'videos/0602-myfUsKf.gif',barbell_curl:'videos/0031-25GPyDY.gif',hammer_curl:'videos/0313-slDvUAU.gif',smith_shoulder_press:'videos/0766-903mzG8.gif',reverse_fly:'videos/0383-EAs3xL9.gif',hack_squat:'videos/0743-Qa55kX1.gif',rdl:'videos/0085-wQ2c4XD.gif',leg_curl:'videos/0586-17lJ1kr.gif',calf_raise:'videos/1372-8ozhUIZ.gif',hanging_leg_raise:'videos/0472-I3tsCnC.gif',cable_crunch:'videos/0175-WW95auq.gif',incline_press_any:'videos/0314-ns0SIbU.gif',pulldown_any:'videos/0197-qdRxqCj.gif',crunch_combo:'videos/0972-tZkGYZ9.gif',machine_press:'videos/0577-T0yTjgW.gif',bulgarian_split_squat:'videos/0987-arsYEd3.gif',biceps_curl:'videos/0294-NbVPDMW.gif',triceps_pressdown:'videos/0201-3ZflifB.gif',front_raise:'videos/0041-b2Uoz54.gif',barbell_shoulder_press:'videos/1457-Kyd9Rz5.gif',shrug:'videos/0406-NJzBsGJ.gif',flat_db_press:'videos/0289-SpYC0Kp.gif',decline_press:'videos/0033-GrO65fd.gif',chest_dip:'videos/0251-9WTm7dq.gif',deadlift:'videos/0032-ila4NZS.gif',barbell_row:'videos/0027-eZyBC3j.gif',one_arm_db_row:'videos/0292-C0MA9bC.gif',tbar_row:'videos/1349-BgljGjd.gif',face_pull:'videos/0233-ZfyAGhK.gif',arnold_press:'videos/2137-Xy4jlWA.gif',upright_row:'videos/0246-cALKspW.gif',back_squat:'videos/0043-qXTaZnJ.gif',leg_press:'videos/0739-10Z2DXU.gif',leg_extension:'videos/0585-my33uHU.gif',preacher_curl:'videos/0070-qOgPVf6.gif',cable_curl:'videos/0868-G08RZcQ.gif',skull_crusher:'videos/0061-iZop9xO.gif',close_grip_bench:'videos/0030-J6Dx1Mu.gif',plank:'videos/0464-CosupLu.gif',wrist_curl:'videos/0126-82LxxkW.gif',treadmill_run:'videos/0685-oLrKqDH.gif',incline_walk:'videos/3666-rjiM4L3.gif',elliptical:'videos/2141-rjtuP6X.gif',stationary_bike:'videos/2138-H1PESYI.gif',stair_climber:'videos/2311-j9Q5crt.gif',db_shoulder_press:'videos/0405-znQUdHY.gif',machine_crunch:'videos/1452-Wgaz7pm.gif',sit_up:'videos/0001-2gPfomN.gif',leg_raise:'videos/0620-WhuFnR7.gif',butterfly_crunch:'videos/0001-2gPfomN.gif',lying_leg_raise:'videos/0620-WhuFnR7.gif',incline_twist_crunch:'videos/0495-9ZGZuOD.gif',weighted_russian_twist:'videos/0846-fZFZ704.gif',hammer_one_arm_row:'videos/1356-OIFMAp1.gif',assisted_pullup:'videos/0017-kiJ4Z2K.gif',goblet_squat:'videos/1760-yn8yg1r.gif',reverse_hack_squat:'videos/0743-Qa55kX1.gif',triceps_rope_overhead:'videos/0194-2IxROQ1.gif',triceps_kickback:'videos/0333-W6PxUkg.gif',bench_dip:'videos/0129-RrLske5.gif',single_arm_pushdown:'videos/1723-qRZ5S1N.gif'};
   const GYM_GROUP_FALLBACK={胸:'videos/0025-EIeI8Vf.gif',背:'videos/0652-lBDjFxJ.gif',肩:'videos/0334-DsgkuIt.gif',腿:'videos/0043-qXTaZnJ.gif',臀:'videos/0043-qXTaZnJ.gif',二头:'videos/0405-znQUdHY.gif',三头:'videos/0025-EIeI8Vf.gif',腹:'videos/0001-2gPfomN.gif',小腿:'videos/0043-qXTaZnJ.gif',有氧:'videos/2141-rjtuP6X.gif'};
   const GYM_MAP_KEY='train-log-gym-media-map-v27';let persistedGymMap={};try{persistedGymMap=JSON.parse(localStorage.getItem(GYM_MAP_KEY)||'{}')||{};}catch(e){}const saveGymMap=()=>{try{localStorage.setItem(GYM_MAP_KEY,JSON.stringify(persistedGymMap));}catch(e){}};
   const VIDEO_MAP={
@@ -369,7 +369,9 @@
     bench_dip:{bvid:'BV1jMSYYnE4Q',author:'Ariel_宇',duration:11,title:'凳上臂屈伸'},
     single_arm_pushdown:{bvid:'BV1nQ4y1K7d5',author:'长风万钧',duration:47,title:'单臂绳索下压'}
   };
-  let gymIndexPromise=null; const gymCache={};
+  const BILIBILI_COVER_BASE='https://i0.hdslb.com/bfs/archive/';
+  const BILIBILI_COVERS={lateral_raise:'fef5a5187b709d76692502190efda94b20fc37b4.jpg',bench_press:'f8bda2da2822225ade65d47a60eb4768c9f42e90.jpg',pec_deck:'34bc75e751b7b297aa59581f63d4a6189b24e316.jpg',cable_row:'ef0a041b1a04cad8294eecefa45ea6e4a982c600.jpg',reverse_pec_deck:'91843880fa34c9b593e32e2eebb17b6d03197be6.jpg',machine_row:'2f3adfd6b5eb9edce229933b32e432534b597da6.jpg',cable_fly:'4c2dab4209f276d07bf4ecbac87f648b05616525.jpg',pullup:'4508edea441b4b6c4caceb63f1ae9690120097ce.jpg',calf_raise:'80185cb7cde43c8d42d9e2c905301f809c3fecab.jpg',bulgarian_split_squat:'ea3ab0170f0ea7017f42760b13a03f5d1de84bb1.jpg',lat_pulldown:'4a68d20bbc774ccee2b2ae8d9627c822739a5f45.jpg',hack_squat:'402cf2265b67dd8a49c605c92cdc38153547b6a3.jpg',tbar_row:'b6865253315ab916d854316cf1a9d25dce6af3fe.jpg',chest_dip:'7b7eaec3b514fe67974d01f344bddf5cba353eba.jpg',barbell_shoulder_press:'12d998578cf5c0752d119fb91a875bd6c5a19309.jpg',front_raise:'19711bc78ee58e65949dc12fe7da68d4e94d232f.jpg',flat_db_press:'b5aaa6250bae92fd0c86cb954a4d33a8ae74121c.jpg',smith_shoulder_press:'0cf948b02785fc957f8e8205cfd40c3fad2b93f6.jpg',biceps_curl:'786ff8839cdc1448bbfe167762ccd48e8e3d7b48.jpg',hanging_leg_raise:'0a6fe2b1601df365ae2f9898ebc9cca9848acd07.jpg',incline_db_press:'6a41da7c7446a2b10bc55da1654bcc9d10830292.jpg',overhead_triceps:'1d4094d0553056a88c883fb726143fdc571aa11f.jpg',face_pull:'4f1344bbf04f539f423c9637f4c3ed93d0267a0f.jpg',incline_machine_press:'8432de217d440bfba1bbc4c3885ccba4af8f9810.jpg',leg_curl:'a79e3726a8358f992f356ee64932b1931bc63990.jpg',triceps_pushdown:'6db4e40dfa340a3801e3f8047e718f6f33c7b590.jpg',barbell_curl:'9e6c81f8f9ee37f317d754722de942c7f8a39bb8.jpg',incline_press_any:'e9834cbad16cc41b114d240324c5c3f189413e40.jpg',reverse_fly:'37dfde7d25f622f0daf69050a5750f8cd35361f7.jpg',stair_climber:'871640d4a208f088e3148c43673d77a0b73ef04a.jpg',triceps_pressdown:'6db4e40dfa340a3801e3f8047e718f6f33c7b590.jpg',weighted_russian_twist:'7912a03a3dcab3e355582cea5e61662d5b91292c.jpg',skull_crusher:'6cfc45274619b7d956e34504520f4416c69b9667.jpg',incline_walk:'5bea29f5eb42f17daa99502f05bdf5be293ef183.jpg',single_arm_pushdown:'eda1f6d139ad22c07af28428a5e04f77cffc40d2.jpg',upright_row:'906198d2c7a9320fec4280ae6c9c32963b565747.png',decline_press:'fbf76c2cb1dda1777118471b92e9766723c93a91.jpg',cable_crunch:'cd353bc561ebb57b36ae797eee651e34afd7b2b7.jpg',preacher_curl:'d5a43d3c6689abbdf0bdc92eb7ea2153c420835c.jpg',stationary_bike:'11d85fdef99962c8f7bf28d34250eecfeacfd0fb.jpg',leg_extension:'a5a2683d1010a615b602fd4b705cfef0c28a1489.jpg',one_arm_db_row:'77d07529bcc516116500429bf930b3b4205b9263.jpg',hammer_curl:'bd28c2ef1771dd32f1707b7703dfc82e81b9d9b4.jpg',reverse_hack_squat:'4a1f744380cbd200366563c319bc5fe4072417f9.jpg',crunch_combo:'9fc51b4f708d06e83558340c55600fae085c77fd.jpg',shrug:'a93cad94de9c610d5584e7fdd861b6995c42527c.png',lying_leg_raise:'90861388f6c342a071dfe1d78d520e09091b0c52.jpg',arnold_press:'b8cf15422fcd696bb4920d68a6d4545a6fbf6d62.jpg',elliptical:'f345bb1d2dda0a88768715ce6ebe2e58afbe8d0d.jpg',butterfly_crunch:'fcebc0b97a3180341c0d12071d5df161d4e375c1.jpg',pulldown_any:'4a68d20bbc774ccee2b2ae8d9627c822739a5f45.jpg',barbell_row:'3087ee9d1339543e04a8007a28914155fb5d5064.jpg',treadmill_run:'ad527dd78e0451213784d2dbdd733c708b8cdaaa.jpg',back_squat:'c0385d00ba1e97569d81a104ca1535668b9ffe08.jpg',bench_dip:'7e9fa030a452b627878a898f09eabc52ea02f2e9.jpg',machine_press:'db7fa1cd33d863b53c25feb5f238822ae6b4943f.jpg',machine_crunch:'68bcd88d1ae4001423b3821c713d0f054d0056ce.jpg',incline_twist_crunch:'77a28b9e3c7f3a3586d866d45641b3efa8b373d5.jpg',assisted_pullup:'e3e0edb952bf000a2977c5475e0c04495364bfad.jpg',rdl:'0f64d22d1d526b544ffc71f093b26d2e9ab16e28.jpg',wrist_curl:'avsas_i181030txjplqpkcl58q31d7kv9827kk_0004.jpg',sit_up:'92903114f8c4bdd7362750194fcd0133ffa634d9.jpg',cable_curl:'8bed1eadfd7075b2c86d7bdb102c03ed66259097.jpg',db_shoulder_press:'8dd14ef399ef6a25c39c5c23fdd80cc02b034bb9.jpg',leg_raise:'80daefc1b4dc65837e082a5a95cca89182d47bcc.jpg',leg_press:'187f4aa21c9bdb02d571a4f4aa2ef9fc2a75e213.jpg',triceps_rope_overhead:'1d4094d0553056a88c883fb726143fdc571aa11f.jpg',deadlift:'8975647ceb5c35a79afd23622687efa0b804549a.jpg',goblet_squat:'b66a52125f947a4ce7f81ee478bc5434b012f253.jpg',hammer_one_arm_row:'e68e53afab1a507378df4054738686ef6e8d58ef.jpg',plank:'0da2378d19743b5b62752c47131a880c65ad401b.jpg',triceps_kickback:'094d4162db4484b23aebabaac432fac9490224e4.jpg',close_grip_bench:'f3adc2c30afa17dfe126933b257c121bcf8cabb3.jpg'};
+  let gymIndexPromise=null; const gymCache={}; let gymVisibilityObserver=null;
   const DIET = {
     training:{label:'训练日',kcal:2400,protein:150,fat:65,carbs:300},
     rest:{label:'休息日',kcal:2200,protein:150,fat:70,carbs:240},
@@ -442,6 +444,7 @@
   }
   function cleanupTutorialMedia(root=modalBody){
     if(!root)return;
+    exitVideoFullscreen();
     root.querySelectorAll('.local-video').forEach(card=>{
       if(card._timer){clearInterval(card._timer);card._timer=null;}
     });
@@ -459,7 +462,7 @@
     resetModalScroll();
     requestAnimationFrame(()=>{resetModalScroll();hydrateGymVisuals(modalBody);});
   }
-  function closeModal(){ cleanupTutorialMedia();modal.classList.remove('tutorial-mode'); if(modal.open)modal.close(); if(pendingFreeWorkout && state.activeWorkout?.planId===null && !(state.activeWorkout.exercises||[]).length){state.activeWorkout=null;pendingFreeWorkout=false;saveState();if(page==='training')renderTraining();} }
+  function closeModal(){ cleanupTutorialMedia();modal.classList.remove('tutorial-mode'); if(modal.open)modal.close(); if(pendingFreeWorkout && state.activeWorkout?.planId===null && !(state.activeWorkout.exercises||[]).length){state.activeWorkout=null;pendingFreeWorkout=false;saveState();if(page==='training')renderTraining();} requestAnimationFrame(()=>hydrateGymVisuals(main,{force:true})); }
 
   function setPage(next){ page=next; document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page)); render(); window.scrollTo({top:0,behavior:'instant'}); }
 
@@ -778,7 +781,8 @@
   function bindExerciseLibrary(){
     document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();activeExerciseFilter=b.dataset.filter;renderExercisesPage();});
     document.querySelectorAll('[data-tutorial]').forEach(b=>b.onclick=()=>showTutorial(b.dataset.tutorial));
-    const s=document.getElementById('exercise-search'); if(s)s.oninput=()=>{ const q=s.value.trim().toLowerCase(); document.getElementById('exercise-list').innerHTML=allExercises().filter(e=>(activeExerciseFilter==='全部'||e.group===activeExerciseFilter)&&e.name.toLowerCase().includes(q)).map(exerciseListItem).join('')||'<div class="empty">没有找到这个动作</div>'; document.querySelectorAll('[data-tutorial]').forEach(b=>b.onclick=()=>showTutorial(b.dataset.tutorial)); };
+    const list=document.getElementById('exercise-list');hydrateGymVisuals(list);
+    const s=document.getElementById('exercise-search'); if(s)s.oninput=()=>{ const q=s.value.trim().toLowerCase(); list.innerHTML=allExercises().filter(e=>(activeExerciseFilter==='全部'||e.group===activeExerciseFilter)&&e.name.toLowerCase().includes(q)).map(exerciseListItem).join('')||'<div class="empty">没有找到这个动作</div>'; document.querySelectorAll('[data-tutorial]').forEach(b=>b.onclick=()=>showTutorial(b.dataset.tutorial)); hydrateGymVisuals(list); };
   }
 
   function bindCommon(){
@@ -838,7 +842,11 @@
   function movePlanExercise(p,i,d){const j=i+d;if(j<0||j>=p.exercises.length)return;[p.exercises[i],p.exercises[j]]=[p.exercises[j],p.exercises[i]];saveState();showPlan(p.id);}
   function showPlanExercisePicker(p,mode,index=null){openModal(mode==='add'?'添加动作':'替换动作',`<div class="search"><input id="plan-pick-search" placeholder="搜索动作"></div><div id="plan-pick-list" class="list"></div>`);const draw=(q='')=>{document.getElementById('plan-pick-list').innerHTML=allExercises().filter(e=>e.name.includes(q)).map(e=>`<button class="list-item" data-plan-pick="${e.id}"><div class="exercise-thumb">${exerciseVisual(e)}</div><div class="grow"><strong>${esc(e.name)}</strong><small>${e.group} · ${e.equipment}</small></div></button>`).join('');hydrateGymVisuals(document.getElementById('plan-pick-list'));document.querySelectorAll('[data-plan-pick]').forEach(b=>b.onclick=()=>{if(mode==='add')p.exercises.push([b.dataset.planPick,1,8,12]);else{const old=p.exercises[index];p.exercises[index]=[b.dataset.planPick,old[1],old[2],old[3]];}saveState();showPlan(p.id);});};draw();document.getElementById('plan-pick-search').oninput=e=>draw(e.target.value.trim());}
 
-  function exerciseVisual(ex){const direct=GYM_DIRECT[ex.id]||persistedGymMap[ex.id]||'';const src=direct?`${GYM_BASE}/${String(direct).replace(/^\.\//,'')}`:'';return `<div class="gym-media-shell"><img class="gym-gif" data-gym-id="${ex.id}" ${src?`src="${src}"`:''} alt="${esc(ex.name)}" loading="lazy" decoding="async" draggable="false"><span class="gym-loading">动作加载中</span></div>`;}
+  function exerciseVisual(ex,{priority=false}={}){
+    const path=GYM_DIRECT[ex.id]||persistedGymMap[ex.id]||'';
+    const src=priority&&path?`${GYM_BASE}/${String(path).replace(/^\.\//,'')}`:'';
+    return `<div class="gym-media-shell${priority?' priority':''}"><img class="gym-gif" data-gym-id="${ex.id}" data-gym-path="${esc(path)}" data-gym-priority="${priority?'1':'0'}" ${src?`src="${src}"`:''} alt="${esc(ex.name)}" loading="${priority?'eager':'lazy'}" decoding="async" ${priority?'fetchpriority="high"':''} draggable="false"><span class="gym-loading">动作加载中</span></div>`;
+  }
   async function loadGymIndex(force=false){if(force)gymIndexPromise=null;if(!gymIndexPromise)gymIndexPromise=fetch(GYM_DATA_URL,{cache:'force-cache'}).then(r=>r.ok?r.json():Promise.reject()).catch(()=>[]);return gymIndexPromise;}
   function norm(s=''){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
   function pickGymRecord(list,ex,q){
@@ -855,8 +863,46 @@
     return named.find(o=>o.n===q)?.x||named.find(o=>o.n.includes(q))?.x||named.find(o=>q.includes(o.n))?.x;
   }
   async function gymRecord(ex){const saved=GYM_DIRECT[ex.id]||persistedGymMap[ex.id];if(saved)return {gif_url:saved};if(gymCache[ex.id])return gymCache[ex.id];try{const list=await loadGymIndex(),q=norm(GYM_QUERY[ex.id]||({胸:'barbell bench press',背:'cable lat pulldown',肩:'dumbbell lateral raise',腿:'barbell full squat',二头:'dumbbell biceps curl',三头:'cable pushdown',腹:'3/4 sit-up',小腿:'standing calf raise',有氧:'walk elliptical cross trainer'}[ex.group]||''));if(q){const rec=pickGymRecord(list,ex,q);if(rec?.gif_url){persistedGymMap[ex.id]=rec.gif_url;saveGymMap();gymCache[ex.id]=rec;return rec;}}}catch(err){console.warn('Gym Visual index load failed',err);}const fallback=GYM_GROUP_FALLBACK[ex.group]||GYM_GROUP_FALLBACK.肩;return {gif_url:fallback,fallback:true};}
-  function attachGymSources(img,path){const rel=String(path||'').replace(/^\.\//,'');if(!rel)return;const sources=[`${GYM_BASE}/${rel}`,`https://cdn.statically.io/gh/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`,`https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`];let i=0;img.classList.remove('no-media');img.onload=()=>img.closest('.gym-media-shell')?.classList.add('loaded');img.onerror=()=>{i++;if(i<sources.length)setTimeout(()=>img.src=sources[i],250*i);else{img.classList.add('no-media');img.closest('.gym-media-shell')?.classList.add('failed');}};img.src=sources[0];}
-  async function hydrateGymVisuals(root=document){const imgs=[...root.querySelectorAll('img.gym-gif:not([data-hydrated])')];await Promise.all(imgs.map(async img=>{img.dataset.hydrated='1';const ex=exercise(img.dataset.gymId),rec=await gymRecord(ex);const path=rec?.gif_url||rec?.video||rec?.gif||(rec?.media_id?`videos/${rec.media_id}.gif`:'');if(path)attachGymSources(img,path);else img.closest('.gym-media-shell')?.classList.add('failed');}));}
+  function attachGymSources(img,path){
+    const rel=String(path||'').replace(/^\.\//,'');if(!rel)return;
+    const sources=[`${GYM_BASE}/${rel}`,`https://cdn.statically.io/gh/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`,`https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`];
+    let i=0;const shell=img.closest('.gym-media-shell');
+    img.dataset.activePath=rel;img.classList.remove('no-media');shell?.classList.remove('failed');
+    img.onload=()=>{if(img.dataset.activePath===rel)shell?.classList.add('loaded');};
+    img.onerror=()=>{if(img.dataset.activePath!==rel)return;i++;if(i<sources.length)setTimeout(()=>{if(img.dataset.activePath===rel)img.src=sources[i];},180*i);else{img.classList.add('no-media');shell?.classList.add('failed');}};
+    const current=img.getAttribute('src')||'';
+    if(current&&current.includes(rel)){if(img.complete&&img.naturalWidth)shell?.classList.add('loaded');return;}
+    img.src=sources[0];
+  }
+  function suspendGymImage(img){
+    if(img._gymSuspendTimer){clearTimeout(img._gymSuspendTimer);img._gymSuspendTimer=null;}
+    img.onload=null;img.onerror=null;img.dataset.activePath='';img.removeAttribute('src');
+    img.closest('.gym-media-shell')?.classList.remove('loaded');
+  }
+  function ensureGymObserver(){
+    if(gymVisibilityObserver||!('IntersectionObserver' in window))return gymVisibilityObserver;
+    gymVisibilityObserver=new IntersectionObserver(entries=>entries.forEach(({target:img,isIntersecting})=>{
+      img.dataset.gymVisible=isIntersecting?'1':'0';
+      if(isIntersecting){if(img._gymSuspendTimer)clearTimeout(img._gymSuspendTimer);img._gymSuspendTimer=null;const path=img.dataset.gymPath;if(path&&!img.getAttribute('src'))attachGymSources(img,path);}
+      else if(img.dataset.gymPriority!=='1'){img._gymSuspendTimer=setTimeout(()=>{if(img.dataset.gymVisible!=='1')suspendGymImage(img);},500);}
+    }),{root:null,rootMargin:'180px 0px',threshold:.01});
+    return gymVisibilityObserver;
+  }
+  function suspendGymVisuals(root=document){
+    root.querySelectorAll('img.gym-gif').forEach(img=>{gymVisibilityObserver?.unobserve(img);suspendGymImage(img);delete img.dataset.hydrated;});
+  }
+  async function hydrateGymVisuals(root=document,{force=false}={}){
+    const imgs=[...root.querySelectorAll('img.gym-gif')].filter(img=>force||!img.dataset.hydrated);
+    await Promise.all(imgs.map(async img=>{
+      img.dataset.hydrated='1';const ex=exercise(img.dataset.gymId);let path=img.dataset.gymPath;
+      if(!path){const rec=await gymRecord(ex);path=rec?.gif_url||rec?.video||rec?.gif||(rec?.media_id?`videos/${rec.media_id}.gif`:'');if(path)img.dataset.gymPath=path;}
+      if(!path){img.closest('.gym-media-shell')?.classList.add('failed');return;}
+      if(img.dataset.gymPriority==='1'){attachGymSources(img,path);return;}
+      const observer=ensureGymObserver();
+      if(observer){observer.observe(img);const rect=img.getBoundingClientRect();if(rect.bottom>=-180&&rect.top<=window.innerHeight+180)attachGymSources(img,path);}
+      else attachGymSources(img,path);
+    }));
+  }
   function canonicalMuscles(text=''){
     const t=String(text),out=[],add=x=>{if(!out.includes(x))out.push(x)};
     if(/胸|上胸/.test(t))add('胸大肌');
@@ -932,18 +978,38 @@
   function videoHTML(ex){
     const video=VIDEO_MAP[ex.id];
     if(!video)return `<div class="video-unavailable"><strong>暂无对应视频</strong><span>3D 动图、动作要点和常见错误仍可正常查看。</span></div>`;
-    const dur=formatVideoDuration(video.duration);
+    const dur=formatVideoDuration(video.duration),cover=BILIBILI_COVERS[ex.id]?`${BILIBILI_COVER_BASE}${BILIBILI_COVERS[ex.id]}`:'';
     return `<div class="local-video" data-local-video="${ex.id}" data-bvid="${video.bvid}">
       <div class="local-video-stage">
-        <div class="local-video-gif">${exerciseVisual(ex)}</div>
+        <div class="bilibili-cover-wrap">${cover?`<img class="bilibili-cover" src="${cover}" alt="${esc(ex.name)}视频讲解封面" loading="eager" decoding="async" fetchpriority="high" referrerpolicy="no-referrer">`:''}</div>
         <div class="local-video-shade"></div>
-        <button class="local-video-play" type="button" aria-label="播放${esc(ex.name)}中文教学视频">▶</button>
-        <div class="local-video-caption"><strong>${esc(ex.name)}</strong><span>${esc(video.title)}</span></div>
+        <button class="local-video-play" type="button" aria-label="播放${esc(ex.name)}中文教学视频"><span>▶</span></button>
         <div class="local-video-time">${dur}</div>
       </div>
-      <div class="local-video-note">${esc(video.author)} · ${dur} · 点击播放后加载</div>
+      <div class="local-video-note">${esc(video.author)} · ${dur} · ${esc(video.title)}</div>
     </div>`;
   }
+
+  let activeVideoStage=null;
+  function videoScreenControlsHTML(){return `<div class="video-screen-controls" aria-label="视频全屏控制"><button type="button" data-video-screen="portrait" aria-label="竖屏全屏" title="竖屏全屏"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M10 6h4M10 18h4"/></svg></button><button type="button" data-video-screen="landscape" aria-label="强制全屏" title="强制全屏"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg></button></div>`;}
+  async function exitVideoFullscreen(requestExit=true){
+    const stage=activeVideoStage;activeVideoStage=null;
+    if(stage){stage.classList.remove('video-force-fullscreen','is-portrait','is-landscape');delete stage.dataset.screenMode;}
+    document.body.classList.remove('video-fullscreen-open');
+    try{if(screen.orientation?.unlock)screen.orientation.unlock();}catch(e){}
+    if(requestExit){try{if(document.fullscreenElement&&document.exitFullscreen)await document.exitFullscreen();else if(document.webkitFullscreenElement&&document.webkitExitFullscreen)document.webkitExitFullscreen();}catch(e){}}
+  }
+  async function enterVideoFullscreen(stage,mode){
+    if(!stage)return;
+    if(activeVideoStage===stage&&stage.dataset.screenMode===mode){await exitVideoFullscreen();return;}
+    if(activeVideoStage&&activeVideoStage!==stage)await exitVideoFullscreen();
+    activeVideoStage=stage;stage.dataset.screenMode=mode;stage.classList.remove('is-portrait','is-landscape');stage.classList.add('video-force-fullscreen',mode==='portrait'?'is-portrait':'is-landscape');document.body.classList.add('video-fullscreen-open');
+    try{if(!document.fullscreenElement&&!document.webkitFullscreenElement){if(stage.requestFullscreen)await stage.requestFullscreen({navigationUI:'hide'});else if(stage.webkitRequestFullscreen)stage.webkitRequestFullscreen();}}catch(e){}
+    try{if(screen.orientation?.lock)await screen.orientation.lock(mode==='portrait'?'portrait':'landscape');}catch(e){}
+  }
+  function bindVideoScreenControls(stage){stage.querySelectorAll('[data-video-screen]').forEach(btn=>btn.onclick=e=>{e.preventDefault();e.stopPropagation();enterVideoFullscreen(stage,btn.dataset.videoScreen);});}
+  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&activeVideoStage)exitVideoFullscreen(false);});
+  document.addEventListener('webkitfullscreenchange',()=>{if(!document.webkitFullscreenElement&&!document.fullscreenElement&&activeVideoStage)exitVideoFullscreen(false);});
 
   function bindLocalTutorialVideos(root=document){
     root.querySelectorAll('.local-video').forEach(card=>{
@@ -954,9 +1020,11 @@
         const bvid=card.dataset.bvid;
         if(!/^BV[0-9A-Za-z]{10}$/.test(bvid||'')){toast('视频地址无效');return;}
         card.classList.add('playing');
-        stage.innerHTML=`<div class="video-loading" aria-live="polite"><span></span>正在加载视频…</div><iframe class="bilibili-player" title="${esc(exercise(card.dataset.localVideo).name)}视频讲解" src="https://player.bilibili.com/player.html?bvid=${encodeURIComponent(bvid)}&page=1&autoplay=1&danmaku=0&high_quality=1" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+        stage.innerHTML=`<div class="video-loading" aria-live="polite"><span></span>正在加载视频…</div><iframe class="bilibili-player" title="${esc(exercise(card.dataset.localVideo).name)}视频讲解" src="https://player.bilibili.com/player.html?bvid=${encodeURIComponent(bvid)}&page=1&autoplay=1&danmaku=0&high_quality=1" loading="eager" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>${videoScreenControlsHTML()}`;
         const frame=stage.querySelector('.bilibili-player');
         frame.addEventListener('load',()=>{stage.querySelector('.video-loading')?.remove();},{once:true});
+        setTimeout(()=>stage.querySelector('.video-loading')?.remove(),8000);
+        bindVideoScreenControls(stage);
       });
     });
   }
@@ -973,7 +1041,8 @@
   function showTutorial(id){
     const ex=exercise(id);modal.classList.add('tutorial-mode');
     if(modal.open){resetModalScroll();modal.close();}
-    openModal(ex.name,`<div class="learn-stack"><section class="learn-card navy"><div class="learn-no blue">01</div><h2>3D 动图</h2><p class="learn-desc">循环查看完整动作轨迹。</p><div class="learn-media white">${exerciseVisual(ex)}</div></section><section class="learn-card navy"><div class="learn-no blue">02</div><h2>视频讲解</h2><p class="learn-desc">短、直接，训练时快速复习动作重点。</p>${videoHTML(ex)}</section><section class="learn-card navy"><div class="learn-no blue">03</div><h2>动作要点</h2>${numberedList(ex.tips,'blue')}</section><section class="learn-card navy"><div class="learn-no orange">04</div><h2>常见错误</h2>${numberedList(ex.mistakes,'orange')}</section><section class="learn-card navy"><div class="learn-no orange">05</div><h2>训练肌群图</h2><p class="learn-desc">红色为主要训练肌群，橙色为辅助训练肌群。</p><div class="learn-media heat">${muscleMap(ex)}</div></section></div>`);
+    suspendGymVisuals(main);
+    openModal(ex.name,`<div class="learn-stack"><section class="learn-card navy"><div class="learn-no blue">01</div><h2>3D 动图</h2><p class="learn-desc">循环查看完整动作轨迹。</p><div class="learn-media white">${exerciseVisual(ex,{priority:true})}</div></section><section class="learn-card navy"><div class="learn-no blue">02</div><h2>视频讲解</h2><p class="learn-desc">短、直接，训练时快速复习动作重点。</p>${videoHTML(ex)}</section><section class="learn-card navy"><div class="learn-no blue">03</div><h2>动作要点</h2>${numberedList(ex.tips,'blue')}</section><section class="learn-card navy"><div class="learn-no orange">04</div><h2>常见错误</h2>${numberedList(ex.mistakes,'orange')}</section><section class="learn-card navy"><div class="learn-no orange">05</div><h2>训练肌群图</h2><p class="learn-desc">红色为主要训练肌群，橙色为辅助训练肌群。</p><div class="learn-media heat">${muscleMap(ex)}</div></section></div>`);
     resetTutorialScroll();
     hydrateGymVisuals(modalBody).finally(resetTutorialScroll);
     bindLocalTutorialVideos(modalBody);
