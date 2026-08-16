@@ -1,5 +1,5 @@
-const APP_CACHE='train-log-v27-local';
-const MEDIA_CACHE='train-log-media-v27';
+const APP_CACHE='train-log-v28-local';
+const MEDIA_CACHE='train-log-media-v28';
 const ASSETS=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/heatmap-neutral-v2.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(APP_CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>![APP_CACHE,MEDIA_CACHE].includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
