@@ -1,6 +1,15 @@
-# TRAIN LOG V3.0 LOCAL
+# TRAIN LOG V3.1 LOCAL
 
-本地无 D1 版本。训练数据使用浏览器本地存储，并提供一键备份/一键恢复。
+本地无 D1 版本。训练数据使用 IndexedDB 分库存储，并保留一键 JSON 备份/一键恢复。首次升级会自动迁移旧版 localStorage 数据。
+
+V3.1 重点：
+- 肌群恢复改为按近 7 天训练、组数、次数、相对重量、主/辅助肌群及有氧负荷叠加计算
+- 力量趋势新增 Epley 公式估算 1RM
+- IndexedDB 分为 workouts / exercises / plans / body_metrics / settings / backup_meta
+- 设置页显示上次备份与 14 天备份提醒
+- 训练肌群图改为全矢量分层 SVG，每块肌肉独立着色
+- 记录统计新增日报、周报、月报、年报
+- 已结束训练支持编辑日期、名称、重量、次数和组数
 
 V2.3 重点：
 - 首页体重/体脂、我的体重/腰围严格等宽等高

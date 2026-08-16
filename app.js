@@ -2,7 +2,10 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.0';
+  const VERSION = '3.1';
+  const DB_NAME = 'train-log-indexeddb';
+  const DB_VERSION = 1;
+  const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
 
   const EXERCISES = [
     {id:'bench_press',name:'杠铃卧推',group:'胸',equipment:'杠铃',muscles:['胸','三头','肩'],primary:'胸大肌',secondary:'肱三头肌、三角肌前束',tips:['肩胛骨向后下方收紧并稳定贴住凳面','双脚踩稳地面，保持躯干稳定','杠铃下降至胸部附近后平稳推起，不要弹胸'],mistakes:['肩膀前顶、肩胛失去稳定','手腕过度后折','为了重量牺牲下放控制'],rest:'2–3 分钟'},
@@ -391,7 +394,7 @@
     workouts:[],
     activeWorkout:null,
     plans:JSON.parse(JSON.stringify(PLAN)),
-    meta:{updatedAt:new Date().toISOString()},
+    meta:{updatedAt:new Date().toISOString(),lastBackupAt:null,storage:'indexeddb'},
     wellness:{sleep:3,energy:3,soreness:2,updated:today()},
     settings:{restSeconds:120,dietMode:'training'},customExercises:[]
   });
@@ -415,6 +418,13 @@
   let dietBatch = 0;
   let dietMode = state.settings.dietMode || 'training';
   let pendingFreeWorkout=false;
+  let historyEditDraft=null;
+  let storageDb=null;
+  let storageReady=false;
+  let storageFallback=false;
+  let persistenceQueue=Promise.resolve();
+  let persistedSections={};
+  let recordReportPeriod='month';
 
   const main = document.getElementById('main');
   const modal = document.getElementById('modal');
@@ -434,13 +444,84 @@
   function planById(id){ return PLAN.find(p=>p.id===id); }
   function formatDate(dateStr){ if(!dateStr)return ''; const d=new Date(`${dateStr}T00:00:00`); return `${d.getMonth()+1}月${d.getDate()}日`; }
   function formatDateTime(ts){ const d=new Date(ts); return `${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+  function backupStatus(){
+    const ts=state.meta?.lastBackupAt;if(!ts)return {date:'尚未备份',days:null,warning:true,text:'建议现在导出第一份训练数据备份'};
+    const d=new Date(ts),days=Math.max(0,Math.floor((Date.now()-d.getTime())/86400000));
+    return {date:`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,days,warning:days>=14,text:days===0?'今天已备份':`已有 ${days} 天未备份`};
+  }
   function currentDateLabel(){const d=new Date(),week=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];return `${d.getMonth()+1}月${d.getDate()}日${week[d.getDay()]}`;}
   function pageIntro(title,subtitle,actions=''){return `<div class="page-intro"><div class="page-intro-copy"><div class="page-title">${esc(title)}</div><div class="page-subtitle">${esc(subtitle)}</div></div>${actions?`<div class="page-intro-actions">${actions}</div>`:''}</div>`;}
   function scheduleDateRefresh(){const now=new Date(),next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,2);setTimeout(()=>{if(page==='home')renderHome();scheduleDateRefresh();},Math.max(1000,next-now));}
   function durationText(ms){ const min=Math.max(1,Math.round(ms/60000)); if(min<60)return `${min} 分钟`; return `${Math.floor(min/60)}小时 ${min%60}分钟`; }
   function sinceText(ts){ if(!ts)return '暂无训练记录'; const ms=Date.now()-new Date(ts).getTime(); const h=Math.max(0,Math.floor(ms/3600000)); if(h<1)return `${Math.floor(ms/60000)} 分钟`; if(h<24)return `${h} 小时`; return `${Math.floor(h/24)}天 ${h%24}小时`; }
   function loadState(){ try{ const raw=localStorage.getItem(STORAGE_KEY); if(raw){ const s=JSON.parse(raw); return {...defaultState(),...s}; } }catch(e){} return defaultState(); }
-  function saveState(){ state.meta=state.meta||{};state.meta.updatedAt=new Date().toISOString();state.plans=PLAN;localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); }
+  function normalizeState(input){
+    const base=defaultState(),next={...base,...(input||{})};
+    next.bodyMetrics=(Array.isArray(next.bodyMetrics)?next.bodyMetrics:[]).map(x=>({...x,id:x.id||uid()}));
+    next.workouts=(Array.isArray(next.workouts)?next.workouts:[]).map(x=>({...x,id:x.id||uid()}));
+    next.customExercises=(Array.isArray(next.customExercises)?next.customExercises:[]).map(x=>({...x,id:x.id||`custom_${uid()}`}));
+    next.settings={...base.settings,...(next.settings||{})};
+    next.wellness={...base.wellness,...(next.wellness||{})};
+    next.meta={...base.meta,...(next.meta||{}),storage:'indexeddb'};
+    next.plans=(Array.isArray(next.plans)&&next.plans.length?next.plans:JSON.parse(JSON.stringify(PLAN))).map((x,i)=>({...x,id:x.id||`plan_${i+1}`}));
+    return next;
+  }
+  function idbRequest(request){return new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error('IndexedDB request failed'));});}
+  function idbTransactionDone(tx){return new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('IndexedDB transaction failed'));tx.onabort=()=>reject(tx.error||new Error('IndexedDB transaction aborted'));});}
+  function openStorageDb(){
+    if(!('indexedDB' in window))return Promise.reject(new Error('IndexedDB unavailable'));
+    return new Promise((resolve,reject)=>{
+      const request=indexedDB.open(DB_NAME,DB_VERSION);
+      request.onupgradeneeded=()=>{const db=request.result;DB_STORES.forEach(name=>{if(!db.objectStoreNames.contains(name))db.createObjectStore(name,{keyPath:name==='settings'||name==='backup_meta'?'key':'id'});});};
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error||new Error('IndexedDB open failed'));
+    });
+  }
+  async function readIndexedState(){
+    const tx=storageDb.transaction(DB_STORES,'readonly');
+    const done=idbTransactionDone(tx);
+    const [workouts,customExercises,plans,bodyMetrics,settingsRows,backupRows]=await Promise.all([
+      idbRequest(tx.objectStore('workouts').getAll()),idbRequest(tx.objectStore('exercises').getAll()),idbRequest(tx.objectStore('plans').getAll()),idbRequest(tx.objectStore('body_metrics').getAll()),idbRequest(tx.objectStore('settings').getAll()),idbRequest(tx.objectStore('backup_meta').getAll())
+    ]);
+    await done;
+    const app=settingsRows.find(x=>x.key==='app')?.value;
+    if(!app&&!workouts.length&&!customExercises.length&&!plans.length&&!bodyMetrics.length)return null;
+    const backup=backupRows.find(x=>x.key==='lastBackupAt')?.value||app?.meta?.lastBackupAt||null;
+    return normalizeState({...app,workouts,customExercises,plans,bodyMetrics,meta:{...(app?.meta||{}),lastBackupAt:backup}});
+  }
+  async function writeIndexedState(snapshot,force=false){
+    if(!storageDb)return;
+    const app={version:VERSION,profile:snapshot.profile,activeWorkout:snapshot.activeWorkout,wellness:snapshot.wellness,settings:snapshot.settings,meta:snapshot.meta};
+    const sections={workouts:snapshot.workouts||[],exercises:snapshot.customExercises||[],plans:snapshot.plans||[],body_metrics:snapshot.bodyMetrics||[],settings:[{key:'app',value:app}],backup_meta:[{key:'lastBackupAt',value:snapshot.meta?.lastBackupAt||null}]};
+    const changed=DB_STORES.filter(name=>force||persistedSections[name]!==JSON.stringify(sections[name]));
+    if(!changed.length)return;
+    const tx=storageDb.transaction(changed,'readwrite');
+    changed.forEach(name=>{const store=tx.objectStore(name);store.clear();sections[name].forEach(item=>store.put(item));});
+    await idbTransactionDone(tx);
+    changed.forEach(name=>persistedSections[name]=JSON.stringify(sections[name]));
+  }
+  function queueIndexedSave(force=false){
+    const snapshot=JSON.parse(JSON.stringify(state));
+    persistenceQueue=persistenceQueue.catch(()=>{}).then(()=>writeIndexedState(snapshot,force)).catch(()=>{storageFallback=true;try{localStorage.setItem(STORAGE_KEY,JSON.stringify(snapshot));}catch(e){}});
+    return persistenceQueue;
+  }
+  async function initializeStorage(){
+    try{
+      storageDb=await openStorageDb();
+      const indexed=await readIndexedState();
+      if(indexed){state=indexed;if(Array.isArray(state.plans)&&state.plans.length)PLAN=state.plans;}
+      else{state=normalizeState(state);PLAN=state.plans;await writeIndexedState(state,true);}
+      storageReady=true;
+      try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
+      render();
+    }catch(e){storageFallback=true;state=normalizeState(state);try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(err){}}
+  }
+  function saveState(){
+    state.meta={...(state.meta||{}),updatedAt:new Date().toISOString(),storage:'indexeddb'};
+    state.plans=PLAN;
+    if(storageReady)queueIndexedSave();
+    else if(storageFallback){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}}
+  }
 
   function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('show'); clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.classList.remove('show'),1800); }
   function resetModalScroll(){
@@ -489,14 +570,23 @@
   function strengthStats(){
     const map={};
     (Array.isArray(state.workouts)?state.workouts:[]).forEach(w=>(w.exercises||[]).forEach(entry=>{
-      const done=(entry.sets||[]).filter(s=>s.done&&!s.warmup&&num(s.weight)!==null);
+      const done=performanceSets(entry);
       if(!done.length)return;
       const id=entry.exerciseId;
-      if(!map[id])map[id]={id,name:entry.customName||exercise(id).name,sessions:0,bestWeight:0};
+      if(!map[id])map[id]={id,name:entry.customName||exercise(id).name,sessions:0,bestWeight:0,best1RM:0};
       map[id].sessions++;
       map[id].bestWeight=Math.max(map[id].bestWeight,...done.map(s=>Number(s.weight)||0));
+      map[id].best1RM=Math.max(map[id].best1RM,...done.map(s=>estimated1RM(s.weight,s.reps)));
     }));
+    Object.values(map).forEach(x=>x.best1RM=round(x.best1RM,1));
     return Object.values(map).sort((a,b)=>b.sessions-a.sessions||b.bestWeight-a.bestWeight);
+  }
+  function estimated1RM(weight,reps){
+    const w=Number(weight)||0,r=clamp(Number(reps)||0,1,15);
+    return w>0&&r>0?w*(1+r/30):0;
+  }
+  function performanceSets(entry){
+    return (entry.sets||[]).filter(s=>s.done&&!s.warmup).flatMap(s=>[s,...(s.drops||[])]).filter(s=>num(s.weight)!==null&&num(s.reps)!==null&&Number(s.weight)>0&&Number(s.reps)>0);
   }
   function showStrength(id){
     const records=[];
@@ -504,48 +594,67 @@
       const entry=(w.exercises||[]).find(x=>x.exerciseId===id);
       if(entry&&(entry.sets||[]).some(s=>s.done))records.push({date:w.endedAt,sets:(entry.sets||[]).filter(s=>s.done)});
     });
-    const ex=exercise(id),best=records.length?Math.max(...records.flatMap(r=>r.sets.map(s=>Number(s.weight)||0))):0;
-    openModal(ex.name,`<div class="card"><div class="stat-row"><span>训练次数</span><strong>${records.length}</strong></div><div class="stat-row"><span>最高工作重量</span><strong>${best} kg</strong></div></div><section class="section"><div class="section-title" style="margin-bottom:10px">历史</div><div class="list">${records.slice().reverse().map(r=>`<div class="list-item"><div class="grow"><strong>${formatDateTime(r.date)}</strong><small>${esc(setSummary(r.sets,ex))}</small></div></div>`).join('')}</div></section>`);
+    const ex=exercise(id),flat=records.flatMap(r=>r.sets.flatMap(s=>[s,...(s.drops||[])])),best=flat.length?Math.max(...flat.map(s=>Number(s.weight)||0)):0,best1RM=flat.length?round(Math.max(...flat.map(s=>estimated1RM(s.weight,s.reps))),1):0;
+    openModal(ex.name,`<div class="card"><div class="stat-row"><span>训练次数</span><strong>${records.length}</strong></div><div class="stat-row"><span>最高工作重量</span><strong>${best} kg</strong></div><div class="stat-row"><span>最高估算 1RM</span><strong>${best1RM} kg</strong></div></div><section class="section"><div class="section-title" style="margin-bottom:10px">历史</div><div class="list">${records.slice().reverse().map(r=>`<div class="list-item"><div class="grow"><strong>${formatDateTime(r.date)}</strong><small>${esc(setSummary(r.sets,ex))}</small></div></div>`).join('')}</div></section><div class="info-note">估算 1RM 使用 Epley 公式，并将超过 15 次的高次数组按 15 次计算，避免结果失真。</div>`);
   }
+  const RECOVERY_GROUPS=['胸','背','肩','二头','三头','腿','臀','腹'];
+  function exerciseRecoveryWeights(ex){
+    const weights={};
+    const add=(group,value)=>{if(RECOVERY_GROUPS.includes(group))weights[group]=Math.max(weights[group]||0,value);};
+    if(ex.type==='cardio'){
+      if(['treadmill_run','incline_walk','elliptical','stationary_bike','stair_climber'].includes(ex.id)){add('腿',.42);add('臀',.28);if(ex.id==='incline_walk'||ex.id==='stair_climber')add('臀',.42);}
+      if(ex.id==='rowing_machine'){add('腿',.35);add('背',.32);add('二头',.16);}
+      return weights;
+    }
+    add(ex.group,1);
+    (ex.muscles||[]).forEach(g=>add(g,g===ex.group?1:.45));
+    const text=`${ex.primary||''} ${ex.secondary||''}`;
+    if(/臀/.test(text))add('臀',ex.group==='腿' ? .55 : .45);
+    if(/股四头|腘绳|腿|内收/.test(text))add('腿',ex.group==='腿'?1:.45);
+    if(/肱三头|三头/.test(text))add('三头',ex.group==='三头'?1:.42);
+    if(/肱二头|二头|肱肌/.test(text))add('二头',ex.group==='二头'?1:.42);
+    if(/三角肌|肩/.test(text))add('肩',ex.group==='肩'?1:.38);
+    if(/腹|核心/.test(text))add('腹',ex.group==='腹'?1:.3);
+    return weights;
+  }
+  function setRecoveryEffort(set,entryBest=0,drop=false){
+    const reps=Number(set.reps)||0,weight=Number(set.weight)||0;
+    if(!reps&&!weight)return 0;
+    const repFactor=reps<=5?1.16:reps<=12?1:reps<=20 ? .86 : .7;
+    const loadFactor=weight>0&&entryBest>0?clamp(.72+.36*(weight/entryBest),.72,1.08):.9;
+    return repFactor*loadFactor*(drop ? .68 : 1);
+  }
+  function muscleRecoveryDetails(){
+    const remaining=Object.fromEntries(RECOVERY_GROUPS.map(g=>[g,[]])),cutoff=Date.now()-7*86400000;
+    (state.workouts||[]).filter(w=>w.endedAt&&new Date(w.endedAt).getTime()>=cutoff).forEach(w=>{
+      const hours=Math.max(0,(Date.now()-new Date(w.endedAt).getTime())/3600000),sessionLoads={};
+      (w.exercises||[]).forEach(entry=>{
+        const ex=exercise(entry.exerciseId),weights=exerciseRecoveryWeights(ex),main=(entry.sets||[]).filter(s=>s.done&&!s.warmup),entryBest=Math.max(0,...main.map(s=>Number(s.weight)||0));
+        let effort=0;main.forEach(s=>{effort+=setRecoveryEffort(s,entryBest,false);(s.drops||[]).forEach(d=>effort+=setRecoveryEffort(d,entryBest,true));});
+        Object.entries(weights).forEach(([g,wgt])=>sessionLoads[g]=(sessionLoads[g]||0)+effort*wgt);
+      });
+      Object.entries(sessionLoads).forEach(([g,load])=>{
+        const fatigue=clamp(load*13.5,10,95),duration=clamp(48+load*8,48,144);
+        if(hours<duration)remaining[g].push(fatigue*Math.pow(1-hours/duration,1.12));
+      });
+    });
+    const sleep=Number(state.wellness?.sleep||3),energy=Number(state.wellness?.energy||3),soreness=Number(state.wellness?.soreness||2);
+    const readinessAdj=({1:-7,2:-4,3:0,4:2,5:4}[sleep]||0)+({1:-7,2:-4,3:0,4:2,5:4}[energy]||0)+({1:1,2:0,3:-2,4:-5,5:-8}[soreness]||0);
+    const scores={};RECOVERY_GROUPS.forEach(g=>{const combined=1-remaining[g].reduce((fresh,fatigue)=>fresh*(1-clamp(fatigue,0,100)/100),1);scores[g]=Math.round(clamp(100-combined*100+readinessAdj,0,100));});
+    return {scores,readinessAdj};
+  }
+  function muscleRecovery(){return muscleRecoveryDetails().scores;}
   function recovery(){
     const last=latestWorkout();
     if(!last)return {score:100,label:'体力充沛',base:100,items:[['暂无近期训练','按完全恢复显示',0]]};
-    const hours=(Date.now()-new Date(last.endedAt).getTime())/3600000;
-    let base=hours<12?30:hours<24?50:hours<36?70:hours<48?85:100;
-    const items=[['距离上次训练',sinceText(last.endedAt),base]];
-    let score=base;
-    const duration=(new Date(last.endedAt)-new Date(last.startedAt))/60000;
-    if(duration>90){score-=5;items.push(['上次训练 > 90 分钟','-5%',-5]);}
-    if(last.fatigue==='high'){score-=10;items.push(['上次主观疲劳较高','-10%',-10]);}
-    if(last.fatigue==='medium'){score-=4;items.push(['上次主观疲劳中等','-4%',-4]);}
-    const sleep=Number(state.wellness.sleep||3), energy=Number(state.wellness.energy||3), soreness=Number(state.wellness.soreness||2);
-    const sleepAdj={1:-10,2:-5,3:0,4:3,5:5}[sleep]||0; score+=sleepAdj; if(sleepAdj)items.push(['今日睡眠感受',`${sleep}/5`,sleepAdj]);
-    const energyAdj={1:-10,2:-5,3:0,4:3,5:5}[energy]||0; score+=energyAdj; if(energyAdj)items.push(['今日精神状态',`${energy}/5`,energyAdj]);
-    const sorenessAdj={1:2,2:0,3:-3,4:-7,5:-10}[soreness]||0; score+=sorenessAdj; if(sorenessAdj)items.push(['今日酸痛感',`${soreness}/5`,sorenessAdj]);
-    score=Math.round(clamp(score,0,100));
-    const label=score>=90?'体力充沛':score>=75?'状态良好':score>=55?'有些疲劳':score>=30?'建议轻量':'建议恢复';
-    return {score,label,base,items};
-  }
-  function muscleRecovery(){
-    const groups=['胸','背','肩','二头','三头','腿','臀','腹'];
-    const results={};
-    groups.forEach(g=>{
-      let latest=null, sets=0;
-      (Array.isArray(state.workouts)?state.workouts:[]).forEach(w=>{
-        let hit=0;
-        (w.exercises||[]).forEach(we=>{ const ex=exercise(we.exerciseId); if(ex.muscles.includes(g)) hit += (we.sets||[]).filter(s=>s.done&&!s.warmup).length; });
-        if(hit && (!latest || new Date(w.endedAt)>new Date(latest.endedAt))){ latest=w; sets=hit; }
-      });
-      if(!latest){results[g]=100;return;}
-      const h=(Date.now()-new Date(latest.endedAt).getTime())/3600000;
-      const target=sets>=8?60:sets>=5?52:44;
-      results[g]=Math.round(clamp((h/target)*100,10,100));
-    });
-    return results;
+    const {scores,readinessAdj}=muscleRecoveryDetails(),values=Object.values(scores).sort((a,b)=>a-b),base=Math.round(values.slice(0,4).reduce((a,b)=>a+b,0)/Math.min(4,values.length));
+    const score=Math.round(clamp(base,0,100)),label=score>=90?'体力充沛':score>=75?'状态良好':score>=55?'有些疲劳':score>=30?'建议轻量':'建议恢复';
+    const lowest=Object.entries(scores).sort((a,b)=>a[1]-b[1]).slice(0,3).map(([g,v])=>`${g} ${v}%`).join(' · ');
+    return {score,label,base,items:[['距离上次训练',sinceText(last.endedAt),0],['恢复较慢肌群',lowest,0],['今日状态修正',`${readinessAdj>=0?'+':''}${readinessAdj}%`,readinessAdj]]};
   }
   function showRecoveryDetail(){
     const r=recovery();
-    openModal('体力恢复',`<div class="card flat"><div class="stat-row"><span>当前恢复</span><strong>${r.score}% · ${esc(r.label)}</strong></div></div><section class="section"><div class="section-title" style="margin-bottom:10px">评分依据</div><div class="card flat">${r.items.map(([name,value,adjustment])=>`<div class="stat-row"><span>${esc(name)}</span><strong>${esc(value)}${adjustment&&String(value)!==String(adjustment)?` · ${adjustment>0?'+':''}${adjustment}`:''}</strong></div>`).join('')}</div></section><div class="note">恢复评分结合训练间隔、上次训练时长与疲劳，以及今天的睡眠、精神和酸痛感受。</div>`);
+    openModal('体力恢复',`<div class="card flat"><div class="stat-row"><span>当前恢复</span><strong>${r.score}% · ${esc(r.label)}</strong></div></div><section class="section"><div class="section-title" style="margin-bottom:10px">评分依据</div><div class="card flat">${r.items.map(([name,value])=>`<div class="stat-row"><span>${esc(name)}</span><strong>${esc(value)}</strong></div>`).join('')}</div></section><div class="note">按每个动作实际完成的组数、次数、相对重量、主练/辅助肌群和近 7 天训练叠加计算；有氧也会影响对应下肢肌群。通常 48–72 小时明显恢复，最迟 6 天回到 100%。睡眠、精神和酸痛会做小幅修正。</div>`);
   }
   function showWellness(){
     const w=state.wellness;
@@ -670,7 +779,7 @@
       </div>
       <div id="history-content" class="page-scroll-content">${selectedHistory.length?`<div class="record-month-heading"><strong>${selectedMonth}月</strong><span>${selectedHistory.length} 次训练</span></div><div class="list">${selectedHistory.map(historyItem).join('')}</div>`:'<div class="card empty">这个月还没有训练记录</div>'}</div>`;
     document.getElementById('record-month-trigger').onclick=()=>{recordMonthOpen=!recordMonthOpen;renderHistoryPage();};
-    document.getElementById('record-stats-btn').onclick=showRecordStats;
+    document.getElementById('record-stats-btn').onclick=()=>showRecordStats();
     document.querySelectorAll('[data-record-year]').forEach(b=>b.onclick=()=>{recordYear=Number(b.dataset.recordYear);recordMonthOpen=true;renderHistoryPage();});
     document.querySelectorAll('[data-record-month]').forEach(b=>b.onclick=()=>{selectedRecordMonth=b.dataset.recordMonth;recordYear=Number(selectedRecordMonth.slice(0,4));recordMonthOpen=false;renderHistoryPage();});
     document.querySelectorAll('[data-history]').forEach(b=>b.onclick=()=>showWorkoutDetail(b.dataset.history));
@@ -684,11 +793,33 @@
     return `<div class="record-month-panel"><div class="record-year-tabs">${shownYears.map(y=>`<button class="${y===year?'active':''}" data-record-year="${y}">${y}年</button>`).join('')}</div><div class="record-month-grid">${Array.from({length:12},(_,i)=>{const key=`${year}-${String(i+1).padStart(2,'0')}`,enabled=months.includes(key);return `<button ${enabled?'':'disabled'} class="${enabled?'available':''} ${key===selectedRecordMonth?'active':''}" ${enabled?`data-record-month="${key}"`:''}>${i+1}月</button>`;}).join('')}</div></div>`;
   }
 
-  function showRecordStats(){
-    const history=[...state.workouts].filter(w=>w.endedAt),durationMinutes=history.reduce((sum,w)=>sum+Math.max(0,new Date(w.endedAt)-new Date(w.startedAt))/60000,0);
-    const groups={};history.forEach(w=>(w.exercises||[]).forEach(e=>{const count=(e.sets||[]).filter(s=>s.done&&!s.warmup).length;if(count){const group=exercise(e.exerciseId).group||'其他';groups[group]=(groups[group]||0)+count;}}));
-    const groupEntries=Object.entries(groups).sort((a,b)=>b[1]-a[1]),maxGroup=Math.max(1,...groupEntries.map(x=>x[1]));
-    openModal('记录统计',`<div class="record-summary-grid"><div><strong>${history.length}</strong><span>训练次数</span></div><div><strong>${durationMinutes>=60?round(durationMinutes/60,1)+'h':Math.round(durationMinutes)+'min'}</strong><span>训练时长</span></div><div><strong>${history.reduce((n,w)=>n+workingSets(w),0)}</strong><span>有效组</span></div><div><strong>${Math.round(history.reduce((n,w)=>n+totalVolume(w),0)).toLocaleString()}</strong><span>训练容量 kg</span></div></div><section class="section record-stat-section"><div class="section-title">部位分布</div><div class="card flat">${groupEntries.length?groupEntries.map(([g,n])=>`<div class="record-part-row"><span>${esc(g)}</span><div><i style="width:${Math.round(n/maxGroup*100)}%"></i></div><strong>${n}组</strong></div>`).join(''):'<div class="empty">完成训练后自动生成统计</div>'}</div></section><div class="info-note">统计根据已完成的训练组自动汇总，热身组不计入有效组。</div>`);
+  function reportRange(period,now=new Date()){
+    const end=new Date(now);end.setHours(23,59,59,999);const start=new Date(now);start.setHours(0,0,0,0);
+    if(period==='week'){const day=(start.getDay()+6)%7;start.setDate(start.getDate()-day);}
+    if(period==='month')start.setDate(1);
+    if(period==='year'){start.setMonth(0,1);}
+    return {start,end};
+  }
+  function reportDuration(minutes){const m=Math.round(minutes);return m>=60?`${Math.floor(m/60)}h ${m%60}min`:`${m}min`;}
+  function periodLabel(period,start){const local=`${start.getMonth()+1}月${start.getDate()}日`;return period==='day'?local:period==='week'?`${local}起`:period==='month'?`${start.getFullYear()}年${start.getMonth()+1}月`:`${start.getFullYear()}年`;}
+  function workoutExerciseMax(w,id){const entry=(w.exercises||[]).find(e=>e.exerciseId===id);return entry?Math.max(0,...performanceSets(entry).map(s=>Number(s.weight)||0)):0;}
+  function recordReport(period){
+    const {start,end}=reportRange(period),all=[...state.workouts].filter(w=>w.endedAt).sort((a,b)=>new Date(a.endedAt)-new Date(b.endedAt)),history=all.filter(w=>{const d=new Date(w.endedAt);return d>=start&&d<=end;});
+    const durationMinutes=history.reduce((sum,w)=>sum+Math.max(0,new Date(w.endedAt)-new Date(w.startedAt))/60000,0),groupSessions={};
+    history.forEach(w=>{const hit=new Set();(w.exercises||[]).forEach(e=>{if((e.sets||[]).some(s=>s.done&&!s.warmup))hit.add(exercise(e.exerciseId).group||'其他');});hit.forEach(g=>groupSessions[g]=(groupSessions[g]||0)+1);});
+    const topGroup=Object.entries(groupSessions).sort((a,b)=>b[1]-a[1])[0]||null;
+    const ids=[...new Set(history.flatMap(w=>(w.exercises||[]).map(e=>e.exerciseId)))];
+    const progress=ids.map(id=>{const sessions=history.filter(w=>workoutExerciseMax(w,id)>0),first=sessions[0],last=sessions.at(-1);if(!first||!last||first.id===last.id)return null;const from=workoutExerciseMax(first,id),to=workoutExerciseMax(last,id);return from>0&&to>from?{id,name:exercise(id).name,from,to,pct:round((to-from)/from*100,1)}:null;}).filter(Boolean).sort((a,b)=>b.pct-a.pct).slice(0,4);
+    let records=0;ids.forEach(id=>{const before=Math.max(0,...all.filter(w=>new Date(w.endedAt)<start).map(w=>workoutExerciseMax(w,id))),inside=Math.max(0,...history.map(w=>workoutExerciseMax(w,id)));if(inside>before&&inside>0)records++;});
+    const body=[...(state.bodyMetrics||[])].filter(m=>{const d=new Date(`${m.date}T12:00:00`);return d>=start&&d<=end;}).sort((a,b)=>new Date(a.date)-new Date(b.date)),firstBody=body[0],lastBodyInPeriod=body.at(-1);
+    return {period,start,end,history,durationMinutes,topGroup,progress,records,firstBody,lastBodyInPeriod};
+  }
+  function showRecordStats(period=recordReportPeriod){
+    recordReportPeriod=period;const r=recordReport(period),history=r.history;
+    const progressHTML=r.progress.length?r.progress.map(x=>`<div class="report-progress-row"><div><strong>${esc(x.name)}</strong><span>${x.from} kg → ${x.to} kg</span></div><b>+${x.pct}%</b></div>`).join(''):'<div class="report-empty">当前周期还没有可比较的力量进步</div>';
+    const bodyRows=[];if(r.firstBody&&r.lastBodyInPeriod&&r.firstBody!==r.lastBodyInPeriod){if(num(r.firstBody.weight)!==null&&num(r.lastBodyInPeriod.weight)!==null)bodyRows.push(`<div class="report-change-row"><span>体重</span><strong>${r.firstBody.weight} → ${r.lastBodyInPeriod.weight} kg</strong></div>`);if(num(r.firstBody.waist)!==null&&num(r.lastBodyInPeriod.waist)!==null)bodyRows.push(`<div class="report-change-row"><span>腰围</span><strong>${r.firstBody.waist} → ${r.lastBodyInPeriod.waist} cm</strong></div>`);}
+    openModal('记录统计',`<div class="report-tabs">${[['day','日报'],['week','周报'],['month','月报'],['year','年报']].map(([key,label])=>`<button class="${period===key?'active':''}" data-report-period="${key}">${label}</button>`).join('')}</div><div class="report-period-label">${periodLabel(period,r.start)}</div><div class="record-summary-grid"><div><strong>${history.length}</strong><span>训练次数</span></div><div><strong>${reportDuration(r.durationMinutes)}</strong><span>训练时长</span></div><div><strong>${history.reduce((n,w)=>n+workingSets(w),0)}</strong><span>有效组</span></div><div><strong>${Math.round(history.reduce((n,w)=>n+totalVolume(w),0)).toLocaleString()}</strong><span>训练容量 kg</span></div></div><div class="report-highlight"><span>训练最多</span><strong>${r.topGroup?`${esc(r.topGroup[0])} ${r.topGroup[1]}次`:'—'}</strong></div><section class="report-section"><h3>本${period==='day'?'日':period==='week'?'周':period==='month'?'月':'年'}进步</h3>${progressHTML}</section><section class="report-section"><div class="report-records"><span>新纪录</span><strong>${r.records} 项</strong></div></section><section class="report-section"><h3>身体变化</h3>${bodyRows.length?bodyRows.join(''):'<div class="report-empty">当前周期至少记录两次身体数据后显示变化</div>'}</section><div class="info-note">统计仅计算已完成的正式组；训练最多按包含该部位的训练次数计算。</div>`);
+    document.querySelectorAll('[data-report-period]').forEach(b=>b.onclick=()=>showRecordStats(b.dataset.reportPeriod));
   }
 
   function calendarHTML(history){
@@ -758,7 +889,7 @@
       document.getElementById('add-body-btn').onclick=()=>showBodyForm(); document.querySelectorAll('[data-edit-body]').forEach(b=>b.onclick=()=>showBodyForm(b.dataset.editBody));
     }else{
       const stats=strengthStats();
-      c.innerHTML=stats.length?`<div class="list">${stats.map(s=>`<button class="list-item" style="width:100%;text-align:left" data-strength="${s.id}"><div class="grow"><strong>${esc(s.name)}</strong><small>${s.sessions} 次训练记录</small></div><div style="text-align:right"><strong>${s.bestWeight} kg</strong><small>最高工作重量</small></div></button>`).join('')}</div>`:'<div class="card empty"><strong>还没有力量趋势</strong>完成训练后，这里会自动汇总每个动作的历史重量和次数。</div>';
+      c.innerHTML=stats.length?`<div class="list">${stats.map(s=>`<button class="list-item" style="width:100%;text-align:left" data-strength="${s.id}"><div class="grow"><strong>${esc(s.name)}</strong><small>${s.sessions} 次训练记录</small></div><div class="strength-values"><strong>${s.bestWeight} kg</strong><small>最高重量</small><b>估算 1RM ${s.best1RM} kg</b></div></button>`).join('')}</div>`:'<div class="card empty"><strong>还没有力量趋势</strong>完成训练后，这里会自动汇总每个动作的历史重量和次数。</div>';
       document.querySelectorAll('[data-strength]').forEach(b=>b.onclick=()=>showStrength(b.dataset.strength));
     }
   }
@@ -778,11 +909,11 @@
       <section class="section"><div class="section-title" style="margin-bottom:10px">最近记录</div><div class="list">${[...state.bodyMetrics].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(m=>`<button class="list-item" style="width:100%;text-align:left" data-edit-body="${m.id}"><div class="grow"><strong>${formatDate(m.date)}</strong><small>${[m.bodyFat?`体脂 ${m.bodyFat}%`:null,m.skeletalMuscle?`骨骼肌 ${m.skeletalMuscle}kg`:null,m.waist?`腰围 ${m.waist}cm`:null].filter(Boolean).join(' · ')||'身体记录'}</small></div><strong>${m.weight?m.weight+' kg':'—'}</strong></button>`).join('')}</div></section>`;
       document.getElementById('add-body-btn').onclick=()=>showBodyForm();document.querySelectorAll('[data-edit-body]').forEach(b=>b.onclick=()=>showBodyForm(b.dataset.editBody));
     } else if(dataTab==='strength'){
-      const stats=strengthStats(); c.innerHTML=stats.length?`<div class="list">${stats.map(s=>`<button class="list-item" style="width:100%;text-align:left" data-strength="${s.id}"><div class="grow"><strong>${esc(s.name)}</strong><small>${s.sessions} 次训练记录</small></div><strong>${s.bestWeight} kg</strong></button>`).join('')}</div>`:'<div class="card empty">完成训练后自动生成力量趋势。</div>';document.querySelectorAll('[data-strength]').forEach(b=>b.onclick=()=>showStrength(b.dataset.strength));
+      const stats=strengthStats(); c.innerHTML=stats.length?`<div class="list">${stats.map(s=>`<button class="list-item" style="width:100%;text-align:left" data-strength="${s.id}"><div class="grow"><strong>${esc(s.name)}</strong><small>${s.sessions} 次训练记录</small></div><div class="strength-values"><strong>${s.bestWeight} kg</strong><small>最高重量</small><b>估算 1RM ${s.best1RM} kg</b></div></button>`).join('')}</div>`:'<div class="card empty">完成训练后自动生成力量趋势。</div>';document.querySelectorAll('[data-strength]').forEach(b=>b.onclick=()=>showStrength(b.dataset.strength));
     } else if(dataTab==='diet'){
       c.innerHTML=`<div class="card"><div class="tabs diet-tabs"><button class="tab ${dietMode==='training'?'active':''}" data-diet="training">训练日</button><button class="tab ${dietMode==='rest'?'active':''}" data-diet="rest">休息日</button><button class="tab ${dietMode==='cheat'?'active':''}" data-diet="cheat">放纵餐</button></div>${dietHTML(dietMode)}</div>`;document.querySelectorAll('[data-diet]').forEach(b=>b.onclick=()=>{dietMode=b.dataset.diet;dietBatch=0;state.settings.dietMode=dietMode;saveState();renderMine();});document.getElementById('shuffle-diet').onclick=()=>{const size=dietMode==='cheat'?CHEAT_MENUS.length:(dietMode==='rest'?REST_DIET_MENUS.length:DIET_MENUS.length);dietBatch=(dietBatch+1)%size;renderMine();};
     } else {
-      c.innerHTML=`<section class="section"><div class="card"><div class="stat-row"><span>默认组间休息</span><button class="pill blue" id="rest-setting">${state.settings.restSeconds} 秒</button></div><div class="stat-row"><span>训练记录</span><strong>${state.workouts.length} 次</strong></div><div class="stat-row"><span>数据保存</span><strong>本机保存</strong></div></div></section><div class="backup-grid"><button class="backup-action" id="export-btn">一键备份</button><button class="backup-action" id="import-btn">一键恢复</button></div><input id="import-file" type="file" accept="application/json,.json" hidden><div class="note" style="margin-top:12px">数据保存在当前手机。建议每周或重要训练后点一次“一键备份”，换手机或清理浏览器数据后可用备份文件一键恢复。</div>`;document.getElementById('rest-setting').onclick=showRestSetting;document.getElementById('export-btn').onclick=exportData;document.getElementById('import-btn').onclick=()=>document.getElementById('import-file').click();document.getElementById('import-file').onchange=e=>importDataFile(e.target.files?.[0]);
+      const backup=backupStatus();c.innerHTML=`<section class="section"><div class="card"><div class="stat-row"><span>默认组间休息</span><button class="pill blue" id="rest-setting">${state.settings.restSeconds} 秒</button></div><div class="stat-row"><span>训练记录</span><strong>${state.workouts.length} 次</strong></div><div class="stat-row"><span>数据保存</span><strong>${storageFallback?'本机兼容存储':'IndexedDB'}</strong></div><div class="stat-row"><span>上次备份</span><strong>${backup.date}</strong></div><div class="stat-row backup-status-row ${backup.warning?'warning':''}"><span>备份状态</span><strong>${backup.text}</strong></div></div></section><div class="backup-grid"><button class="backup-action" id="export-btn">一键备份</button><button class="backup-action" id="import-btn">一键恢复</button></div><input id="import-file" type="file" accept="application/json,.json" hidden><div class="note ${backup.warning?'backup-reminder':''}" style="margin-top:12px">${backup.warning?'建议备份训练数据。':''} 数据保存在当前手机的 IndexedDB；换手机或清理浏览器数据后，可用 JSON 备份一键恢复。</div>`;document.getElementById('rest-setting').onclick=showRestSetting;document.getElementById('export-btn').onclick=exportData;document.getElementById('import-btn').onclick=()=>document.getElementById('import-file').click();document.getElementById('import-file').onchange=e=>importDataFile(e.target.files?.[0]);
     }
     if(c && !c.innerHTML.trim()){dataTab='body';setTimeout(()=>{if(page==='mine')renderMine();},0);}
   }
@@ -1008,7 +1139,7 @@
     if(/肱二头|二头|肱肌/.test(t))add('肱二头肌');
     if(/肱三头|三头/.test(t))add('肱三头肌');
     if(/前臂|肱桡|腕屈/.test(t))add('前臂肌群');
-    if(/腹直|核心|腹/.test(t))add('腹直肌');
+    if(/腹直|核心|收腹|卷腹|腹部/.test(t))add('腹直肌');
     if(/腹斜|核心/.test(t))add('腹斜肌');
     if(/髋屈/.test(t))add('髋屈肌群');
     if(/股四头/.test(t))add('股四头肌');
@@ -1021,43 +1152,36 @@
     if(/背/.test(t)&&!out.some(x=>['背阔肌','菱形肌','斜方肌','竖脊肌'].includes(x)))add('背阔肌');
     return out;
   }
-  function muscleMap(ex){
-    const pri=canonicalMuscles(ex.primary||ex.group),sec=canonicalMuscles(ex.secondary||'').filter(x=>!pri.includes(x));
-    const color=n=>pri.includes(n)?'#f5222d':'#ff9f1a';
+  function layeredMuscleMap(ex){
+    const primary=canonicalMuscles(ex.primary||ex.group),secondary=canonicalMuscles(ex.secondary||'').filter(x=>!primary.includes(x));
     const specs={
-      '胸大肌':{side:'front',anchor:[520,214],paths:['M440 184 C460 166 491 164 524 186 L522 246 C492 260 461 251 442 232Z','M529 186 C562 164 594 166 616 184 L614 232 C592 251 560 260 530 246Z']},
-      '三角肌前束':{side:'front',anchor:[408,208],paths:['M405 178 C412 151 430 145 452 164 L449 222 C437 243 421 253 407 245Z','M608 164 C630 145 648 151 655 178 L653 245 C638 253 622 243 611 222Z']},
-      '三角肌中束':{side:'front',anchor:[409,197],paths:['M404 173 C412 150 431 144 453 164 L448 218 C435 240 419 248 406 238Z','M607 164 C629 144 648 150 656 173 L654 238 C641 248 625 240 612 218Z']},
-      '肱二头肌':{side:'front',anchor:[389,300],paths:['M381 252 C396 245 411 254 414 278 L402 346 C389 353 377 344 374 326Z','M646 252 C661 245 676 254 680 278 L687 326 C683 344 672 353 659 346Z']},
-      '前臂肌群':{side:'front',anchor:[367,397],paths:['M365 334 C380 326 397 337 399 358 L380 472 C365 475 351 461 352 444Z','M662 337 C679 326 695 334 708 358 L721 444 C722 461 708 475 693 472Z']},
-      '腹直肌':{side:'front',anchor:[526,348],paths:['M486 255 C511 246 540 246 565 255 L568 421 C556 442 542 451 527 446 C512 451 497 442 485 421Z']},
-      '腹斜肌':{side:'front',anchor:[469,365],paths:['M450 276 C466 267 483 280 486 304 L482 431 C466 437 451 423 444 402Z','M568 304 C571 280 588 267 604 276 L610 402 C603 423 588 437 572 431Z']},
-      '髋屈肌群':{side:'front',anchor:[500,463],paths:['M472 431 L514 445 L505 508 L474 487Z','M540 445 L582 431 L580 487 L549 508Z']},
-      '股四头肌':{side:'front',anchor:[481,574],paths:['M457 448 C481 438 510 448 519 477 L507 650 C492 678 470 676 455 651Z','M535 477 C544 448 573 438 597 448 L599 651 C584 676 562 678 547 650Z']},
-      '内收肌群':{side:'front',anchor:[520,560],paths:['M500 455 L523 474 L514 626 L492 584Z','M531 474 L554 455 L562 584 L540 626Z']},
-      '斜方肌':{side:'back',anchor:[1027,207],paths:['M967 152 C992 134 1011 132 1027 157 C1043 132 1062 134 1087 152 L1092 271 L1027 318 L962 271Z']},
-      '菱形肌':{side:'back',anchor:[1027,257],paths:['M987 210 L1027 180 L1067 210 L1055 307 L999 307Z']},
-      '背阔肌':{side:'back',anchor:[976,354],paths:['M959 266 C978 258 1001 276 1008 307 L1003 421 C984 438 964 423 950 397Z','M1046 307 C1053 276 1076 258 1095 266 L1104 397 C1090 423 1070 438 1051 421Z']},
-      '竖脊肌':{side:'back',anchor:[1027,379],paths:['M1008 307 L1025 319 L1020 451 L1004 423Z','M1029 319 L1046 307 L1050 423 L1034 451Z']},
-      '三角肌后束':{side:'back',anchor:[929,205],paths:['M904 175 C913 151 934 146 961 165 L957 223 C945 244 925 253 909 241Z','M1093 165 C1120 146 1141 151 1150 175 L1145 241 C1129 253 1109 244 1097 223Z']},
-      '肩袖外旋肌':{side:'back',anchor:[972,242],paths:['M948 205 C961 194 982 199 994 216 L989 274 C972 286 954 278 945 258Z','M1060 216 C1072 199 1093 194 1106 205 L1109 258 C1100 278 1082 286 1065 274Z']},
-      '肱三头肌':{side:'back',anchor:[906,301],paths:['M891 253 C907 245 924 255 929 280 L918 351 C904 359 890 347 886 328Z','M1125 280 C1130 255 1147 245 1163 253 L1168 328 C1164 347 1150 359 1136 351Z']},
-      '臀大肌':{side:'back',anchor:[1072,442],paths:['M958 385 C984 366 1014 373 1025 406 L1022 512 C998 535 972 527 958 500Z','M1029 406 C1040 373 1070 366 1096 385 L1096 500 C1082 527 1056 535 1032 512Z']},
-      '腘绳肌群':{side:'back',anchor:[1073,580],paths:['M969 503 C993 492 1016 509 1019 539 L1012 663 C993 678 975 664 966 641Z','M1035 539 C1038 509 1061 492 1085 503 L1088 641 C1079 664 1061 678 1042 663Z']},
-      '腓肠肌':{side:'back',anchor:[1073,729],paths:['M968 660 C989 650 1009 667 1013 696 L1007 804 C994 829 976 821 967 798Z','M1041 696 C1045 667 1065 650 1086 660 L1087 798 C1078 821 1060 829 1047 804Z']}
+      '胸大肌':{id:'pectoralis_major',label:'胸大肌',side:'front',anchor:[250,128],paths:['M224 111 C232 101 244 101 249 111 L248 143 C237 148 225 143 220 134Z','M251 111 C256 101 268 101 276 111 L280 134 C275 143 263 148 252 143Z']},
+      '三角肌前束':{id:'front_deltoid',label:'前三角',side:'front',anchor:[207,119],paths:['M202 105 C207 94 219 92 226 101 L222 130 C215 139 205 137 199 129Z','M274 101 C281 92 293 94 298 105 L301 129 C295 137 285 139 278 130Z']},
+      '三角肌中束':{id:'middle_deltoid',label:'中三角',side:'front',anchor:[202,111],paths:['M198 102 C204 91 217 89 225 100 L221 122 C213 131 204 130 197 122Z','M275 100 C283 89 296 91 302 102 L303 122 C296 130 287 131 279 122Z']},
+      '肱二头肌':{id:'biceps',label:'肱二头肌',side:'front',anchor:[190,162],paths:['M186 136 C194 132 201 138 201 150 L195 181 C188 187 181 180 181 170Z','M299 150 C299 138 306 132 314 136 L319 170 C319 180 312 187 305 181Z']},
+      '前臂肌群':{id:'forearms',label:'前臂',side:'front',anchor:[174,215],paths:['M179 179 C188 176 195 183 193 194 L181 237 C174 242 166 237 167 228Z','M307 183 C314 176 323 179 333 228 C334 237 326 242 319 237 L307 194Z']},
+      '腹直肌':{id:'abs',label:'腹直肌',side:'front',anchor:[250,188],paths:['M237 147 C245 144 255 144 263 147 L264 220 C256 229 244 229 236 220Z']},
+      '腹斜肌':{id:'obliques',label:'腹斜肌',side:'front',anchor:[224,188],paths:['M221 145 C229 145 235 151 236 160 L234 220 C225 222 219 214 216 201Z','M264 160 C265 151 271 145 279 145 L284 201 C281 214 275 222 266 220Z']},
+      '髋屈肌群':{id:'hip_flexors',label:'髋屈肌群',side:'front',anchor:[250,234],paths:['M226 218 L248 224 L244 253 L228 245Z','M252 224 L274 218 L272 245 L256 253Z']},
+      '股四头肌':{id:'quads',label:'股四头肌',side:'front',anchor:[227,300],paths:['M222 246 C234 240 245 249 246 266 L239 344 C231 356 219 351 216 337Z','M254 266 C255 249 266 240 278 246 L284 337 C281 351 269 356 261 344Z']},
+      '内收肌群':{id:'adductors',label:'内收肌群',side:'front',anchor:[250,292],paths:['M241 248 L250 260 L247 333 L238 306Z','M250 260 L259 248 L262 306 L253 333Z']},
+      '斜方肌':{id:'trapezius',label:'斜方肌',side:'back',anchor:[510,117],paths:['M478 94 C491 84 502 88 510 101 C518 88 529 84 542 94 L544 142 L510 166 L476 142Z']},
+      '菱形肌':{id:'rhomboids',label:'菱形肌',side:'back',anchor:[510,145],paths:['M492 123 L510 106 L528 123 L523 163 L497 163Z']},
+      '背阔肌':{id:'lats',label:'背阔肌',side:'back',anchor:[485,181],paths:['M477 148 C488 143 501 151 503 166 L500 221 C489 229 478 220 471 204Z','M517 166 C519 151 532 143 543 148 L549 204 C542 220 531 229 520 221Z']},
+      '竖脊肌':{id:'erector_spinae',label:'竖脊肌',side:'back',anchor:[510,199],paths:['M503 162 L509 169 L507 228 L500 218Z','M511 169 L517 162 L520 218 L513 228Z']},
+      '三角肌后束':{id:'rear_deltoid',label:'后三角',side:'back',anchor:[466,119],paths:['M459 104 C465 92 477 91 485 101 L481 130 C473 138 463 136 457 128Z','M535 101 C543 91 555 92 561 104 L563 128 C557 136 547 138 539 130Z']},
+      '肩袖外旋肌':{id:'rotator_cuff',label:'肩袖',side:'back',anchor:[482,139],paths:['M477 121 C484 115 494 119 499 128 L496 151 C487 157 479 153 475 145Z','M521 128 C526 119 536 115 543 121 L545 145 C541 153 533 157 524 151Z']},
+      '肱三头肌':{id:'triceps',label:'肱三头肌',side:'back',anchor:[451,163],paths:['M448 136 C456 132 464 138 465 151 L459 183 C452 189 444 182 444 172Z','M555 151 C556 138 564 132 572 136 L576 172 C576 182 568 189 561 183Z']},
+      '臀大肌':{id:'glutes',label:'臀大肌',side:'back',anchor:[530,245],paths:['M477 218 C490 209 504 214 509 229 L508 268 C496 279 483 275 476 263Z','M511 229 C516 214 530 209 543 218 L544 263 C537 275 524 279 512 268Z']},
+      '腘绳肌群':{id:'hamstrings',label:'腘绳肌',side:'back',anchor:[535,310],paths:['M482 268 C494 263 505 271 506 285 L502 347 C493 355 484 348 479 337Z','M514 285 C515 271 526 263 538 268 L541 337 C536 348 527 355 518 347Z']},
+      '腓肠肌':{id:'calves',label:'小腿',side:'back',anchor:[535,378],paths:['M482 349 C493 344 502 352 503 366 L498 414 C491 426 482 420 479 408Z','M517 366 C518 352 527 344 538 349 L541 408 C538 420 529 426 522 414Z']}
     };
-    const active=[...new Set([...pri,...sec])].filter(n=>specs[n]);
-    const shapes=active.flatMap(n=>specs[n].paths.map(d=>`<path d="${d}" fill="${color(n)}" fill-opacity=".94" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>`)).join('');
-    const labelsFor=side=>{
-      const items=active.filter(n=>specs[n].side===side).sort((a,b)=>specs[a].anchor[1]-specs[b].anchor[1]);
-      if(!items.length)return '';
-      const minY=150,maxY=820,gap=74;
-      const ys=items.map(n=>Math.max(minY,Math.min(maxY,specs[n].anchor[1])));
-      for(let i=1;i<ys.length;i++)ys[i]=Math.max(ys[i],ys[i-1]+gap);
-      if(ys.at(-1)>maxY){const shift=ys.at(-1)-maxY;for(let i=0;i<ys.length;i++)ys[i]-=shift;}
-      return items.map((n,i)=>{const [ax,ay]=specs[n].anchor,c=color(n),left=side==='front',elbow=left?300:1235,end=left?185:1350,textX=left?165:1370,anchor=left?'end':'start';return `<g class="heatmap-label"><path d="M${ax} ${ay} L${elbow} ${ys[i]} L${end} ${ys[i]}" fill="none" stroke="${c}" stroke-width="3"/><circle cx="${ax}" cy="${ay}" r="6" fill="#fff" stroke="${c}" stroke-width="3"/><text x="${textX}" y="${ys[i]+11}" text-anchor="${anchor}" fill="${c}">${n}</text></g>`;}).join('');
-    };
-    return `<div class="heatmap-wrap formal v26"><svg viewBox="0 0 1536 1024" class="heatmap-svg" role="img" aria-label="${esc(ex.name)}训练肌群图"><image href="assets/heatmap-neutral-v2.png" x="0" y="0" width="1536" height="1024" preserveAspectRatio="xMidYMid meet"/><g>${shapes}</g>${labelsFor('front')}${labelsFor('back')}</svg><div class="heatmap-legend"><span><i class="red"></i>主要训练肌群</span><span><i class="orange"></i>辅助训练肌群</span><span><i class="gray"></i>非主要肌群</span></div></div>`;
+    const active=[...new Set([...primary,...secondary])].filter(n=>specs[n]);
+    const fill=name=>primary.includes(name)?'#f5222d':secondary.includes(name)?'#ff9f1a':'#f7f8fa';
+    const body=`<g class="anatomy-base" fill="#eef1f6" stroke="#aeb8c7" stroke-width="1.5" stroke-linejoin="round"><circle cx="250" cy="51" r="25"/><path d="M238 75 L262 75 L266 94 C283 96 296 105 303 124 L318 177 L336 231 L324 239 L301 185 L286 139 L283 220 L274 245 L282 345 L275 428 L258 428 L251 350 L249 267 L247 350 L239 428 L222 428 L215 345 L223 245 L216 220 L217 139 L199 185 L176 239 L164 231 L182 177 L197 124 C204 105 217 96 234 94Z"/><path d="M164 231 L176 239 L169 253 L158 246Z M324 239 L336 231 L342 246 L331 253Z M222 428 L239 428 L238 442 L214 442Z M258 428 L275 428 L286 442 L262 442Z"/><circle cx="510" cy="51" r="25"/><path d="M498 75 L522 75 L526 94 C543 96 556 105 563 124 L578 177 L596 231 L584 239 L561 185 L546 139 L543 220 L534 245 L542 345 L535 428 L518 428 L511 350 L509 267 L507 350 L499 428 L482 428 L475 345 L483 245 L476 220 L477 139 L459 185 L436 239 L424 231 L442 177 L457 124 C464 105 477 96 494 94Z"/><path d="M424 231 L436 239 L429 253 L418 246Z M584 239 L596 231 L602 246 L591 253Z M482 428 L499 428 L498 442 L474 442Z M518 428 L535 428 L546 442 L522 442Z"/></g>`;
+    const regions=Object.entries(specs).flatMap(([name,s])=>s.paths.map(d=>`<path class="anatomy-muscle" data-muscle="${s.id}" d="${d}" fill="${fill(name)}" stroke="#c5ccd7" stroke-width="1.2"/>`)).join('');
+    const labels=side=>{const items=active.filter(n=>specs[n].side===side).sort((a,b)=>specs[a].anchor[1]-specs[b].anchor[1]);if(!items.length)return '';const min=96,max=402,gap=34,ys=items.map(n=>clamp(specs[n].anchor[1],min,max));for(let i=1;i<ys.length;i++)ys[i]=Math.max(ys[i],ys[i-1]+gap);if(ys.at(-1)>max){const shift=ys.at(-1)-max;ys.forEach((_,i)=>ys[i]-=shift);}return items.map((name,i)=>{const s=specs[name],[x,y]=s.anchor,c=fill(name),front=side==='front',bend=front?145:615,end=front?123:637,textX=front?116:644,align=front?'end':'start';return `<g class="heatmap-label"><path d="M${x} ${y} L${bend} ${ys[i]} L${end} ${ys[i]}" fill="none" stroke="${c}" stroke-width="1.8"/><circle cx="${x}" cy="${y}" r="3" fill="#fff" stroke="${c}" stroke-width="1.8"/><text x="${textX}" y="${ys[i]+5}" text-anchor="${align}" fill="${c}">${s.label}</text></g>`;}).join('');};
+    return `<div class="heatmap-wrap formal layered"><svg viewBox="0 0 760 470" class="heatmap-svg anatomy-svg" role="img" aria-label="${esc(ex.name)}训练肌群图"><text class="body-view-label" x="250" y="24" text-anchor="middle">正面</text><text class="body-view-label" x="510" y="24" text-anchor="middle">背面</text>${body}<g>${regions}</g>${labels('front')}${labels('back')}</svg><div class="heatmap-legend"><span><i class="red"></i>主要训练肌群</span><span><i class="orange"></i>辅助训练肌群</span><span><i class="gray"></i>非主要肌群</span></div></div>`;
   }
 
   function formatVideoDuration(seconds){
@@ -1130,18 +1254,36 @@
     const ex=exercise(id);modal.classList.add('tutorial-mode');
     if(modal.open){resetModalScroll();modal.close();}
     suspendGymVisuals(main);
-    openModal(ex.name,`<div class="learn-stack"><section class="learn-card navy"><div class="learn-no blue">01</div><h2>3D 动图</h2><p class="learn-desc">循环查看完整动作轨迹。</p><div class="learn-media white">${exerciseVisual(ex,{priority:true})}</div></section><section class="learn-card navy"><div class="learn-no blue">02</div><h2>视频讲解</h2><p class="learn-desc">短、直接，训练时快速复习动作重点。</p>${videoHTML(ex)}</section><section class="learn-card navy"><div class="learn-no blue">03</div><h2>动作要点</h2>${numberedList(ex.tips,'blue')}</section><section class="learn-card navy"><div class="learn-no orange">04</div><h2>常见错误</h2>${numberedList(ex.mistakes,'orange')}</section><section class="learn-card navy"><div class="learn-no orange">05</div><h2>训练肌群图</h2><p class="learn-desc">红色为主要训练肌群，橙色为辅助训练肌群。</p><div class="learn-media heat">${muscleMap(ex)}</div></section></div>`);
+    openModal(ex.name,`<div class="learn-stack"><section class="learn-card navy"><div class="learn-no blue">01</div><h2>3D 动图</h2><p class="learn-desc">循环查看完整动作轨迹。</p><div class="learn-media white">${exerciseVisual(ex,{priority:true})}</div></section><section class="learn-card navy"><div class="learn-no blue">02</div><h2>视频讲解</h2><p class="learn-desc">短、直接，训练时快速复习动作重点。</p>${videoHTML(ex)}</section><section class="learn-card navy"><div class="learn-no blue">03</div><h2>动作要点</h2>${numberedList(ex.tips,'blue')}</section><section class="learn-card navy"><div class="learn-no orange">04</div><h2>常见错误</h2>${numberedList(ex.mistakes,'orange')}</section><section class="learn-card navy"><div class="learn-no orange">05</div><h2>训练肌群图</h2><p class="learn-desc">红色为主要训练肌群，橙色为辅助训练肌群。</p><div class="learn-media heat">${layeredMuscleMap(ex)}</div></section></div>`);
     resetTutorialScroll();
     hydrateGymVisuals(modalBody).finally(resetTutorialScroll);
     bindLocalTutorialVideos(modalBody);
   }
 
   function showWorkoutDetail(id){
-    const w=state.workouts.find(x=>x.id===id); if(!w)return; openModal(w.name,`<div class="card"><div class="stat-row"><span>日期</span><strong>${formatDateTime(w.endedAt)}</strong></div><div class="stat-row"><span>训练时间</span><strong>${durationText(new Date(w.endedAt)-new Date(w.startedAt))}</strong></div><div class="stat-row"><span>有效组</span><strong>${workingSets(w)} 组</strong></div><div class="stat-row"><span>训练容量</span><strong>${Math.round(totalVolume(w)).toLocaleString()} kg</strong></div></div><section class="section"><div class="section-title" style="margin-bottom:10px">训练内容</div>${(w.exercises||[]).map(e=>`<div class="card flat history-ex"><div class="exercise-thumb">${exerciseVisual(exercise(e.exerciseId))}</div><div><strong>${esc(e.customName || exercise(e.exerciseId).name)}</strong><div class="small muted" style="margin-top:6px">${esc(setSummary(e.sets,exercise(e.exerciseId)))}</div></div></div>`).join('')}</section><button class="secondary-btn danger" style="width:100%" id="delete-workout">删除这次训练</button>`); document.getElementById('delete-workout').onclick=()=>{state.workouts=state.workouts.filter(x=>x.id!==id);saveState();closeModal();render();toast('训练记录已删除');};
+    const w=state.workouts.find(x=>x.id===id); if(!w)return; openModal(w.name,`<div class="card"><div class="stat-row"><span>日期</span><strong>${formatDateTime(w.endedAt)}</strong></div><div class="stat-row"><span>训练时间</span><strong>${durationText(new Date(w.endedAt)-new Date(w.startedAt))}</strong></div><div class="stat-row"><span>有效组</span><strong>${workingSets(w)} 组</strong></div><div class="stat-row"><span>训练容量</span><strong>${Math.round(totalVolume(w)).toLocaleString()} kg</strong></div></div><section class="section"><div class="section-title" style="margin-bottom:10px">训练内容</div>${(w.exercises||[]).map(e=>`<div class="card flat history-ex"><div class="exercise-thumb">${exerciseVisual(exercise(e.exerciseId))}</div><div><strong>${esc(e.customName || exercise(e.exerciseId).name)}</strong><div class="small muted" style="margin-top:6px">${esc(setSummary(e.sets,exercise(e.exerciseId)))}</div></div></div>`).join('')}</section><div class="history-detail-actions"><button class="secondary-btn" id="edit-workout">编辑记录</button><button class="secondary-btn danger" id="delete-workout">删除这次训练</button></div>`); document.getElementById('edit-workout').onclick=()=>showEditWorkout(id);document.getElementById('delete-workout').onclick=()=>{state.workouts=state.workouts.filter(x=>x.id!==id);saveState();closeModal();render();toast('训练记录已删除');};
+  }
+  function syncHistoryEditDraft(){
+    if(!historyEditDraft)return;
+    document.querySelectorAll('[data-history-edit]').forEach(input=>{const [ei,si,di,field]=input.dataset.historyEdit.split(':').map((v,i)=>i<3?Number(v):v),set=historyEditDraft.exercises?.[ei]?.sets?.[si];if(!set)return;if(di>=0){set.drops=set.drops||[];if(set.drops[di])set.drops[di][field]=input.value;}else set[field]=input.value;});
+    const name=document.getElementById('history-edit-name'),date=document.getElementById('history-edit-date');if(name)historyEditDraft.name=name.value.trim()||historyEditDraft.name;if(date)historyEditDraft._editDate=date.value;
+  }
+  function historyEditSetHTML(ex,set,ei,si){
+    const cardio=ex.type==='cardio',main=cardio?`<input inputmode="decimal" value="${esc(set.minutes??set.reps??'')}" data-history-edit="${ei}:${si}:-1:minutes"><span>min</span>`:`<input inputmode="decimal" value="${esc(set.weight??'')}" data-history-edit="${ei}:${si}:-1:weight"><span>kg</span><input inputmode="numeric" value="${esc(set.reps??'')}" data-history-edit="${ei}:${si}:-1:reps"><span>次</span>`;
+    const drops=cardio?'':(set.drops||[]).map((d,di)=>`<div class="history-edit-drop"><span>递${di+1}</span><input inputmode="decimal" value="${esc(d.weight??'')}" data-history-edit="${ei}:${si}:${di}:weight"><em>kg</em><input inputmode="numeric" value="${esc(d.reps??'')}" data-history-edit="${ei}:${si}:${di}:reps"><em>次</em></div>`).join('');
+    return `<div class="history-edit-set"><div class="history-edit-main"><b>${set.warmup?'热':si+1}</b>${main}<button type="button" data-history-delete-set="${ei}:${si}" aria-label="删除这一组">×</button></div>${drops}</div>`;
+  }
+  function showEditWorkout(id,keepDraft=false){
+    const original=state.workouts.find(x=>x.id===id);if(!original)return;if(!keepDraft||!historyEditDraft||historyEditDraft.id!==id)historyEditDraft=JSON.parse(JSON.stringify(original));
+    const date=historyEditDraft._editDate||(historyEditDraft.endedAt||today()).slice(0,10);
+    openModal('编辑训练记录',`<div class="form-grid"><div class="field"><label>训练名称</label><input id="history-edit-name" value="${esc(historyEditDraft.name)}"></div><div class="field"><label>日期</label><input id="history-edit-date" type="date" value="${date}"></div></div><div class="history-edit-list">${(historyEditDraft.exercises||[]).map((entry,ei)=>{const ex=exercise(entry.exerciseId);return `<section class="history-edit-exercise"><h3>${esc(entry.customName||ex.name)}</h3>${(entry.sets||[]).map((set,si)=>historyEditSetHTML(ex,set,ei,si)).join('')}<button class="text-btn history-add-set" type="button" data-history-add-set="${ei}">＋ 添加一组</button></section>`;}).join('')}</div><button class="primary-btn" id="save-history-edit">保存修改</button>`);
+    document.querySelectorAll('[data-history-delete-set]').forEach(b=>b.onclick=()=>{syncHistoryEditDraft();const [ei,si]=b.dataset.historyDeleteSet.split(':').map(Number);historyEditDraft.exercises[ei].sets.splice(si,1);showEditWorkout(id,true);});
+    document.querySelectorAll('[data-history-add-set]').forEach(b=>b.onclick=()=>{syncHistoryEditDraft();const ei=Number(b.dataset.historyAddSet),ex=exercise(historyEditDraft.exercises[ei].exerciseId),last=historyEditDraft.exercises[ei].sets.at(-1)||{};historyEditDraft.exercises[ei].sets.push(ex.type==='cardio'?{minutes:last.minutes||'',done:true,warmup:false,drops:[]}:{weight:last.weight||'',reps:last.reps||'',done:true,warmup:false,drops:[]});showEditWorkout(id,true);});
+    document.getElementById('save-history-edit').onclick=()=>{syncHistoryEditDraft();const duration=Math.max(60000,new Date(original.endedAt)-new Date(original.startedAt)),oldEnd=new Date(historyEditDraft.endedAt),parts=(historyEditDraft._editDate||date).split('-').map(Number),newEnd=new Date(parts[0],parts[1]-1,parts[2],oldEnd.getHours(),oldEnd.getMinutes(),oldEnd.getSeconds());historyEditDraft.endedAt=newEnd.toISOString();historyEditDraft.startedAt=new Date(newEnd.getTime()-duration).toISOString();delete historyEditDraft._editDate;state.workouts=state.workouts.map(w=>w.id===id?historyEditDraft:w);historyEditDraft=null;saveState();closeModal();renderHistoryPage();toast('训练记录已更新');};
   }
 
   function showRestSetting(){ openModal('默认组间休息',`<div class="form-grid"><div class="field full"><label>秒</label><input id="rest-seconds" type="number" min="30" max="300" step="15" value="${state.settings.restSeconds}"></div></div><button class="primary-btn" style="margin-top:14px" id="save-rest">保存</button>`);document.getElementById('save-rest').onclick=()=>{state.settings.restSeconds=clamp(Number(document.getElementById('rest-seconds').value)||120,30,300);saveState();closeModal();renderMine();}; }
-  function exportData(){ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`train-log-backup-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+  async function exportData(){ state.meta={...(state.meta||{}),lastBackupAt:new Date().toISOString()};saveState();if(storageReady)await persistenceQueue;const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`train-log-backup-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);if(page==='mine'&&dataTab==='settings')renderMine();toast('备份已导出'); }
   async function importDataFile(file){
     if(!file)return;
     try{
@@ -1151,7 +1293,7 @@
       if(!ok)return;
       state={...defaultState(),...incoming,version:VERSION};
       if(Array.isArray(incoming.plans)&&incoming.plans.length)PLAN=JSON.parse(JSON.stringify(incoming.plans));
-      saveState();render();toast('备份恢复完成');
+      state=normalizeState(state);saveState();if(storageReady)await queueIndexedSave(true);render();toast('备份恢复完成');
     }catch(e){toast('备份文件无效或已损坏');}
   }
 
@@ -1186,10 +1328,11 @@
   }
 
   // PWA app-like interaction: block text selection/context menu and browser pinch zoom while preserving inputs.
-  document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea'))e.preventDefault();});
-  document.addEventListener('selectstart',e=>{if(!e.target.closest('input,textarea'))e.preventDefault();});
+  const eventTargetMatches=(e,selector)=>e.target instanceof Element&&e.target.closest(selector);
+  document.addEventListener('contextmenu',e=>{if(!eventTargetMatches(e,'input,textarea'))e.preventDefault();});
+  document.addEventListener('selectstart',e=>{if(!eventTargetMatches(e,'input,textarea'))e.preventDefault();});
   document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
-  let lastTouchEnd=0;document.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTouchEnd<=300&&!e.target.closest('input,textarea'))e.preventDefault();lastTouchEnd=now;},{passive:false});
+  let lastTouchEnd=0;document.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTouchEnd<=300&&!eventTargetMatches(e,'input,textarea'))e.preventDefault();lastTouchEnd=now;},{passive:false});
 
   document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>setPage(b.dataset.page));
   document.getElementById('modal-close').onclick=closeModal;
@@ -1199,4 +1342,5 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&page==='home')renderHome();});
   scheduleDateRefresh();
   render();
+  initializeStorage();
 })();
