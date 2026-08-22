@@ -1,7 +1,7 @@
 {
   "name": "TRAIN LOG",
   "short_name": "TRAIN LOG",
-  "description": "???????????????????",
+  "description": "简约的私人训练记录、恢复与身体数据助手",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

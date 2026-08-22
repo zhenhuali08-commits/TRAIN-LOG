@@ -1,4 +1,4 @@
-const APP_CACHE='train-log-v32-local';
+const APP_CACHE='train-log-v321-local';
 // Keep the existing media cache across app releases so cached GIFs do not
 // flash blank or download again after every deployment.
 const MEDIA_CACHE='train-log-media-v31';
