@@ -57,8 +57,56 @@
       return svg;
     }
 
+    function renderAnnotations(svg, exercise, colors) {
+      const ns = "http://www.w3.org/2000/svg";
+      const overlay = document.createElementNS(ns, "g");
+      overlay.setAttribute("class", "muscle-annotations");
+      overlay.setAttribute("aria-hidden", "true");
+
+      (exercise.annotations || []).forEach(annotation => {
+        const target = svg.querySelector(`[id="${CSS.escape(annotation.target)}"]`);
+        if (!target) throw new Error(`未找到注释路径：${annotation.target}`);
+        const color = annotation.kind === "primary" ? colors.primary : colors.secondary;
+        const isRightLabel = annotation.labelX > 700;
+        const anchorX = annotation.anchorX;
+        const anchorY = annotation.anchorY;
+        const estimatedTextWidth = annotation.label.length * 15;
+        const lineEndX = isRightLabel ? annotation.labelX - estimatedTextWidth - 12 : annotation.labelX - 10;
+        const bendX = anchorX + (lineEndX - anchorX) * .56;
+
+        const line = document.createElementNS(ns, "polyline");
+        line.setAttribute("points", `${anchorX},${anchorY} ${bendX},${annotation.labelY} ${lineEndX},${annotation.labelY}`);
+        line.setAttribute("fill", "none");
+        line.setAttribute("stroke", color);
+        line.setAttribute("stroke-width", "1.5");
+        line.setAttribute("stroke-linecap", "round");
+        line.setAttribute("stroke-linejoin", "round");
+        line.setAttribute("vector-effect", "non-scaling-stroke");
+
+        const dot = document.createElementNS(ns, "circle");
+        dot.setAttribute("cx", anchorX);
+        dot.setAttribute("cy", anchorY);
+        dot.setAttribute("r", "2.5");
+        dot.setAttribute("fill", color);
+
+        const text = document.createElementNS(ns, "text");
+        text.setAttribute("x", annotation.labelX);
+        text.setAttribute("y", annotation.labelY);
+        text.setAttribute("fill", color);
+        text.setAttribute("font-size", "15");
+        text.setAttribute("font-weight", "700");
+        text.setAttribute("font-family", "-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif");
+        text.setAttribute("dominant-baseline", "middle");
+        text.setAttribute("text-anchor", isRightLabel ? "end" : "start");
+        text.textContent = annotation.label;
+
+        overlay.append(line, dot, text);
+      });
+      svg.appendChild(overlay);
+    }
+
     async function boot() {
-      const mappingResponse = await fetch("./exercise-muscle-mappings.json?v=1", {cache:"no-store"});
+      const mappingResponse = await fetch("./exercise-muscle-mappings.json?v=2", {cache:"no-store"});
       if (!mappingResponse.ok) throw new Error("动作肌群映射表加载失败");
       const mapping = await mappingResponse.json();
       const svgResponse = await fetch(mapping.template, {cache:"force-cache"});
@@ -88,7 +136,9 @@
             <span><i class="dot secondary"></i>辅助训练肌群</span>
             <span><i class="dot"></i>非主要肌群</span>
           </div>`;
-        card.querySelector(".figure").appendChild(document.importNode(svg, true));
+        const renderedSvg = document.importNode(svg, true);
+        card.querySelector(".figure").appendChild(renderedSvg);
+        renderAnnotations(renderedSvg, exercise, mapping.colors);
         preview.appendChild(card);
       });
     }

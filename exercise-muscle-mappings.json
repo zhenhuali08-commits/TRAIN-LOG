@@ -1,7 +1,7 @@
 {
-  "version": 1,
-  "template": "./assets/标准人体.svg?v=2",
-  "templateSha256": "4C347394499EE15A873AB7F0CE6237F9AB82A241B3EB960C64EC32597A1582C6",
+  "version": 2,
+  "template": "./assets/标准人体.svg?v=3",
+  "templateSha256": "301CB13731FC3902E6F7C072EE3B1515859FB58A1BFD48E08B85CE577D04F697",
   "colors": {
     "primary": "#ff3b30",
     "secondary": "#ff9f0a",
@@ -11,6 +11,8 @@
     "bench_press": {
       "name": "杠铃卧推",
       "primary": [
+        "front-左胸大肌上部",
+        "front-右胸大肌上部",
         "front-左胸大肌",
         "front-右胸大肌"
       ],
@@ -23,7 +25,12 @@
         "back-右肱三头肌外侧"
       ],
       "primaryLabels": ["胸大肌"],
-      "secondaryLabels": ["三角肌前束", "肱三头肌"]
+      "secondaryLabels": ["三角肌前束", "肱三头肌"],
+      "annotations": [
+        {"label":"胸大肌","kind":"primary","target":"front-右胸大肌上部","anchorX":281,"anchorY":184,"labelX":402,"labelY":191},
+        {"label":"三角肌前束","kind":"secondary","target":"front-右三角肌前束","anchorX":287,"anchorY":175,"labelX":402,"labelY":153},
+        {"label":"肱三头肌","kind":"secondary","target":"back-右肱三头肌长头","anchorX":804,"anchorY":236,"labelX":894,"labelY":239}
+      ]
     },
     "reverse_fly": {
       "name": "反向飞鸟",
@@ -43,7 +50,13 @@
         "back-肌肉分块11"
       ],
       "primaryLabels": ["三角肌后束"],
-      "secondaryLabels": ["三角肌中束", "斜方肌", "菱形肌"]
+      "secondaryLabels": ["三角肌中束", "斜方肌", "菱形肌"],
+      "annotations": [
+        {"label":"三角肌后束","kind":"primary","target":"back-右三角肌后束","anchorX":778,"anchorY":177,"labelX":894,"labelY":174},
+        {"label":"三角肌中束","kind":"secondary","target":"back-右三角肌中束-1","anchorX":804,"anchorY":180,"labelX":894,"labelY":208},
+        {"label":"斜方肌","kind":"secondary","target":"back-肌肉分块02","anchorX":773,"anchorY":167,"labelX":894,"labelY":136},
+        {"label":"菱形肌","kind":"secondary","target":"back-肌肉分块09","anchorX":749,"anchorY":220,"labelX":894,"labelY":248}
+      ]
     }
   }
 }
