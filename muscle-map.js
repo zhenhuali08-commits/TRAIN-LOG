@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
 
-  const CONFIG_URL='./exercise-muscle-mappings.json?v=3.4.2';
+  const CONFIG_URL='./exercise-muscle-mappings.json?v=3.4.3';
   const HOST_SELECTOR='[data-muscle-map]:not([data-muscle-map-ready])';
   const SVG_NS='http://www.w3.org/2000/svg';
   const EXPECTED_TEMPLATE_HASH='301CB13731FC3902E6F7C072EE3B1515859FB58A1BFD48E08B85CE577D04F697';
@@ -104,10 +104,19 @@
       const target=svg.getElementById(region.target);
       if(!target||typeof target.getBBox!=='function') return;
       const box=target.getBBox();
-      const matrix=target.getCTM();
+      const targetMatrix=target.getCTM();
+      const rootMatrix=svg.getCTM();
       const point=svg.createSVGPoint();
-      point.x=box.x+box.width/2;point.y=box.y+box.height/2;
-      const rootPoint=matrix?point.matrixTransform(matrix):point;
+      // getCTM() on a descendant includes the root SVG's responsive viewBox
+      // scale. Convert that matrix back into the frozen template's own
+      // 940x740 coordinate system before drawing callouts into the SVG.
+      // Otherwise the anchors drift upward/left whenever the card is scaled.
+      point.x=box.x+box.width*.88;point.y=box.y+box.height/2;
+      let rootPoint=point;
+      if(targetMatrix&&rootMatrix){
+        try{rootPoint=point.matrixTransform(rootMatrix.inverse().multiply(targetMatrix));}
+        catch(_){rootPoint=point.matrixTransform(targetMatrix);}
+      }else if(targetMatrix) rootPoint=point.matrixTransform(targetMatrix);
       items.push({...region,anchorX:rootPoint.x,anchorY:rootPoint.y});
     });
     ['front','back'].forEach(side=>{
