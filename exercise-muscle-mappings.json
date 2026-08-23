@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "template": "./assets/标准人体.svg?v=2",
+  "templateSha256": "4C347394499EE15A873AB7F0CE6237F9AB82A241B3EB960C64EC32597A1582C6",
+  "colors": {
+    "primary": "#ff3b30",
+    "secondary": "#ff9f0a",
+    "inactive": "#d2d8e0"
+  },
+  "exercises": {
+    "bench_press": {
+      "name": "杠铃卧推",
+      "primary": [
+        "front-左胸大肌",
+        "front-右胸大肌"
+      ],
+      "secondary": [
+        "front-左三角肌前束",
+        "front-右三角肌前束",
+        "back-左肱三头肌长头",
+        "back-右肱三头肌长头",
+        "back-左肱三头肌外侧",
+        "back-右肱三头肌外侧"
+      ],
+      "primaryLabels": ["胸大肌"],
+      "secondaryLabels": ["三角肌前束", "肱三头肌"]
+    },
+    "reverse_fly": {
+      "name": "反向飞鸟",
+      "primary": [
+        "back-左三角肌后束-1",
+        "back-右三角肌后束"
+      ],
+      "secondary": [
+        "back-左三角肌中束",
+        "back-右三角肌中束-1",
+        "back-右三角肌中束-2",
+        "back-肌肉分块01",
+        "back-肌肉分块02",
+        "back-肌肉分块08",
+        "back-肌肉分块09",
+        "back-肌肉分块10",
+        "back-肌肉分块11"
+      ],
+      "primaryLabels": ["三角肌后束"],
+      "secondaryLabels": ["三角肌中束", "斜方肌", "菱形肌"]
+    }
+  }
+}

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>TRAIN LOG 训练肌群图预览</title>
+  <style>
+    *{box-sizing:border-box}
+    :root{color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif}
+    html,body{margin:0;min-height:100%;background:#f3f5f8;color:#fff}
+    body{padding:28px 16px 44px}
+    main{width:min(100%,760px);margin:0 auto;display:grid;gap:24px}
+    .map-card{overflow:hidden;border-radius:28px;padding:26px;background:linear-gradient(145deg,#0d1c38,#071326);box-shadow:0 16px 42px rgba(9,25,50,.16)}
+    .eyebrow{margin:0 0 5px;color:#ff9f0a;font-size:15px;font-weight:900;letter-spacing:.08em}
+    h2{margin:0;font-size:30px;line-height:1.18;letter-spacing:-.03em}
+    .summary{margin:9px 0 20px;color:#b7c2d5;font-size:15px;line-height:1.55}
+    .figure{overflow:hidden;border-radius:22px;background:#fff;padding:12px 10px 10px}
+    .figure svg{display:block;width:100%;height:auto}
+    .muscle-copy{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+    .muscle-group{min-width:0;border-radius:16px;padding:12px 14px;background:rgba(255,255,255,.075)}
+    .muscle-group strong{display:block;margin-bottom:6px;font-size:13px}
+    .muscle-group span{color:#d8deea;font-size:14px;line-height:1.5}
+    .primary strong{color:#ff544b}.secondary strong{color:#ffad2f}
+    .legend{display:flex;justify-content:center;gap:18px;margin-top:15px;color:#b8c2d2;font-size:12px}
+    .legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+    .dot{width:11px;height:11px;border-radius:3px;background:#d2d8e0}
+    .dot.primary{background:#ff3b30}.dot.secondary{background:#ff9f0a}
+    .error{margin:0;color:#ff6961}
+    @media(max-width:520px){body{padding:16px 12px 32px}.map-card{padding:20px;border-radius:24px}h2{font-size:27px}.muscle-copy{grid-template-columns:1fr}.legend{gap:10px;font-size:11px}}
+  </style>
+</head>
+<body>
+  <main id="preview" aria-live="polite"></main>
+  <script>
+    const exerciseOrder = ["reverse_fly", "bench_press"];
+
+    function renderLabels(labels) {
+      return labels.join("、");
+    }
+
+    function applyMapping(svg, exercise, colors) {
+      svg.removeAttribute("role");
+      svg.removeAttribute("aria-label");
+      svg.querySelectorAll(".muscle-block").forEach(path => {
+        path.style.fill = colors.inactive;
+      });
+      exercise.secondary.forEach(id => {
+        const path = svg.querySelector(`[id="${CSS.escape(id)}"]`);
+        if (!path) throw new Error(`未找到辅助肌群路径：${id}`);
+        path.style.fill = colors.secondary;
+      });
+      exercise.primary.forEach(id => {
+        const path = svg.querySelector(`[id="${CSS.escape(id)}"]`);
+        if (!path) throw new Error(`未找到主要肌群路径：${id}`);
+        path.style.fill = colors.primary;
+      });
+      return svg;
+    }
+
+    async function boot() {
+      const mappingResponse = await fetch("./exercise-muscle-mappings.json?v=1", {cache:"no-store"});
+      if (!mappingResponse.ok) throw new Error("动作肌群映射表加载失败");
+      const mapping = await mappingResponse.json();
+      const svgResponse = await fetch(mapping.template, {cache:"force-cache"});
+      if (!svgResponse.ok) throw new Error("锁定人体母版加载失败");
+      const svgText = await svgResponse.text();
+      const parser = new DOMParser();
+      const preview = document.querySelector("#preview");
+
+      exerciseOrder.forEach((exerciseId, index) => {
+        const exercise = mapping.exercises[exerciseId];
+        const doc = parser.parseFromString(svgText, "image/svg+xml");
+        const svg = applyMapping(doc.documentElement, exercise, mapping.colors);
+        const card = document.createElement("section");
+        card.className = "map-card";
+        card.dataset.exercise = exerciseId;
+        card.innerHTML = `
+          <p class="eyebrow">${String(index + 1).padStart(2,"0")} 训练肌群图</p>
+          <h2>${exercise.name}</h2>
+          <p class="summary">红色为主要训练肌群，橙色为辅助训练肌群。</p>
+          <div class="figure"></div>
+          <div class="muscle-copy">
+            <div class="muscle-group primary"><strong>主要训练</strong><span>${renderLabels(exercise.primaryLabels)}</span></div>
+            <div class="muscle-group secondary"><strong>辅助训练</strong><span>${renderLabels(exercise.secondaryLabels)}</span></div>
+          </div>
+          <div class="legend">
+            <span><i class="dot primary"></i>主要训练肌群</span>
+            <span><i class="dot secondary"></i>辅助训练肌群</span>
+            <span><i class="dot"></i>非主要肌群</span>
+          </div>`;
+        card.querySelector(".figure").appendChild(document.importNode(svg, true));
+        preview.appendChild(card);
+      });
+    }
+
+    boot().catch(error => {
+      document.querySelector("#preview").innerHTML = `<p class="error">${error.message}</p>`;
+      console.error(error);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "file": "assets/标准人体.svg",
+  "status": "frozen",
+  "sha256": "4C347394499EE15A873AB7F0CE6237F9AB82A241B3EB960C64EC32597A1582C6",
+  "rule": "禁止修改人体SVG；训练肌群变化只允许修改动作肌群映射表。"
+}
