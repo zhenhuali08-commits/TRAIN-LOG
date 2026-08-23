@@ -181,3 +181,14 @@ html,body{overflow-x:clip}
 .diet-tabs .tab{font-size:13px}.cheat-hero{margin-top:12px;padding:18px;border-radius:18px;background:linear-gradient(145deg,#fff4e8,#fff9f2);border:1px solid #f5dfc6}.cheat-hero span{display:block;color:#a56a22;font-size:12px}.cheat-hero strong{display:block;margin-top:7px;font-size:21px;color:#6d4212}
 @media(min-width:720px){.page-intro{margin-left:-22px;margin-right:-22px;padding-left:22px;padding-right:22px}}
 @media(max-width:380px){.page-intro{margin-left:-12px;margin-right:-12px;padding-left:12px;padding-right:12px}.record-month-grid{gap:5px}.record-summary-grid{gap:8px}.backup-grid{gap:8px}.backup-action{height:48px;font-size:14px}}
+
+/* V3.4.2: frozen anatomy SVG. Only the exercise-to-muscle mapping may change. */
+.heatmap-wrap.formal.layered.anatomy-fixed-v35{overflow:hidden;padding:0!important;background:#fff!important;contain:layout paint style}
+.anatomy-fixed-v35 .heatmap-svg{display:block;width:100%!important;height:auto!important;aspect-ratio:940/740!important;background:#fff;shape-rendering:geometricPrecision;text-rendering:geometricPrecision}
+.anatomy-fixed-v35 .muscle-block{transition:none!important}
+.anatomy-fixed-v35 .heatmap-labels{pointer-events:none}
+.anatomy-fixed-v35 .heatmap-label text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:14px!important;font-weight:800;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.anatomy-fixed-v35 .heatmap-legend{padding:8px 4px 6px!important;gap:12px!important;font-size:10px!important;border-top:1px solid #f0f1f3}
+.muscle-map-loading{display:grid;place-items:center;width:100%;aspect-ratio:940/740;background:#fff;color:#9aa2ae;font-size:12px}
+.muscle-map-empty{padding:18px;text-align:center;line-height:1.6}
+@media(max-width:390px){.anatomy-fixed-v35 .heatmap-label text{font-size:15px!important}.anatomy-fixed-v35 .heatmap-legend{gap:8px!important;font-size:9px!important}}

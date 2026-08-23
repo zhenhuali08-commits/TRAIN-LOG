@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.4.0';
+  const VERSION = '3.4.2';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -1249,10 +1249,10 @@
   }
 
   function layeredMuscleMap(ex){
-    const primary=canonicalMuscles(ex.primary||ex.group),secondary=canonicalMuscles(ex.secondary||'').filter(x=>!primary.includes(x));
     if(window.TrainLogMuscleMap){
-      return window.TrainLogMuscleMap.render({name:ex.name,primary,secondary});
+      return window.TrainLogMuscleMap.render({exerciseId:ex.id,name:ex.name});
     }
+    const primary=canonicalMuscles(ex.primary||ex.group),secondary=canonicalMuscles(ex.secondary||'').filter(x=>!primary.includes(x));
     const specs={
       '胸大肌':{id:'pectoralis_major',label:'胸大肌',side:'front',anchor:[219,142],paths:['M218 123 C229 114 245 115 257 128 L257 158 C243 165 226 159 216 146 C215 137 216 129 218 123Z','M263 128 C275 115 291 114 302 123 C304 129 305 137 304 146 C294 159 277 165 263 158Z']},
       '三角肌前束':{id:'front_deltoid',label:'前三角',side:'front',anchor:[208,143],paths:['M209 126 C216 118 225 118 233 125 L227 157 C219 163 211 158 207 150Z','M287 125 C295 118 304 118 311 126 L313 150 C309 158 301 163 293 157Z']},
