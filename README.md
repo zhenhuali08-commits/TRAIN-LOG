@@ -1,4 +1,4 @@
-# TRAIN LOG V3.2.1 LOCAL
+# TRAIN LOG V3.3.0 LOCAL
 
 本地无 D1 版本。训练数据使用 IndexedDB 分库存储，并保留一键 JSON 备份/一键恢复。首次升级会自动迁移旧版 localStorage 数据。
 

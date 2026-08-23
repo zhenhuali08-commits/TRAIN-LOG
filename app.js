@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.2.1';
+  const VERSION = '3.3.0';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -426,6 +426,8 @@
   let persistedSections={};
   let recordReportPeriod='month';
   let recordReportAnchor=new Date();
+  let activePopover=null;
+  let popoverPositionRaf=0;
 
   const main = document.getElementById('main');
   const modal = document.getElementById('modal');
@@ -685,6 +687,7 @@
   }
 
   function render(){
+    closePopover();
     document.getElementById('topbar-subtitle').textContent = ({home:'私人训练日志',training:'计划与训练',exercises:'动作教学',history:'训练记录',mine:'身体数据与饮食'})[page];
     if(page==='home')renderHome();
     if(page==='training')renderTraining();
@@ -720,7 +723,7 @@
       </section>
 
       <section class="section">
-        <div class="section-head"><div class="section-title">身体</div><button class="section-link" data-go="history">记录数据</button></div>
+        <div class="section-head"><div class="section-title">身体</div><button class="section-link" data-go="mine" data-mine-target="body">记录数据</button></div>
         <div class="grid2 equal-metrics">
           <div class="card metric-card"><small>当前体重</small><strong>${body?.weight?body.weight+' kg':'—'}</strong><div class="metric-delta">7 日平均 ${avg?avg+' kg':'暂无'}</div></div>
           <div class="card metric-card"><small>体脂率</small><strong>${body?.bodyFat?body.bodyFat+'%':'—'}</strong><div class="metric-delta muted">主要看长期趋势</div></div>
@@ -1032,7 +1035,7 @@
   }
 
   function bindCommon(){
-    document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>setPage(b.dataset.go));
+    document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.mineTarget)dataTab=b.dataset.mineTarget;setPage(b.dataset.go);});
     document.querySelectorAll('[data-start-plan]').forEach(b=>b.onclick=()=>startPlan(b.dataset.startPlan));
     document.querySelectorAll('[data-history]').forEach(b=>b.onclick=()=>showWorkoutDetail(b.dataset.history));
   }
@@ -1060,8 +1063,44 @@
     document.getElementById('add-exercise-btn').onclick=showAddExercise;document.getElementById('finish-workout-btn').onclick=finishWorkoutPrompt;document.getElementById('cancel-workout-btn').onclick=finishOrCancel;
     if(restRemaining>0){document.getElementById('timer-skip')?.addEventListener('click',()=>{restRemaining=0;clearInterval(timerInterval);renderActiveWorkout();});document.getElementById('timer-plus')?.addEventListener('click',()=>{restRemaining+=30;const el=document.getElementById('rest-timer');if(el)el.textContent=fmtTimer(restRemaining);});}
   }
-  function closePopover(){document.querySelectorAll('.action-popover').forEach(x=>x.remove());}
-  function showPopover(anchor,items){closePopover();const pop=document.createElement('div');pop.className='action-popover';pop.innerHTML=items.map((it,i)=>`<button class="${it.danger?'danger':''}" data-pop="${i}">${it.label}</button>`).join('');document.body.appendChild(pop);const r=anchor.getBoundingClientRect(),w=Math.min(250,window.innerWidth-24);pop.style.width=w+'px';pop.style.left=Math.max(12,Math.min(window.innerWidth-w-12,r.right-w))+'px';pop.style.top=Math.min(window.innerHeight-pop.offsetHeight-12,r.bottom+6)+'px';pop.querySelectorAll('[data-pop]').forEach(b=>b.onclick=e=>{e.stopPropagation();const it=items[Number(b.dataset.pop)];closePopover();it.run();});setTimeout(()=>document.addEventListener('click',closePopover,{once:true}),0);}
+  function closePopover(){
+    if(popoverPositionRaf){cancelAnimationFrame(popoverPositionRaf);popoverPositionRaf=0;}
+    if(activePopover){
+      document.removeEventListener('scroll',activePopover.reposition,true);
+      window.removeEventListener('resize',activePopover.reposition);
+      document.removeEventListener('click',activePopover.outside);
+      activePopover.pop.remove();
+      activePopover=null;
+    }
+    document.querySelectorAll('.action-popover').forEach(x=>x.remove());
+  }
+  function positionPopover(){
+    popoverPositionRaf=0;
+    if(!activePopover)return;
+    const {anchor,pop}=activePopover;
+    if(!anchor.isConnected){closePopover();return;}
+    const r=anchor.getBoundingClientRect();
+    if(r.bottom<0||r.top>window.innerHeight){pop.style.visibility='hidden';return;}
+    pop.style.visibility='visible';
+    const w=Math.min(250,window.innerWidth-24),h=pop.offsetHeight;
+    const left=Math.max(12,Math.min(window.innerWidth-w-12,r.right-w));
+    const below=r.bottom+6,above=r.top-h-6;
+    const top=below+h<=window.innerHeight-12?below:Math.max(12,above);
+    pop.style.width=w+'px';pop.style.left=Math.round(left)+'px';pop.style.top=Math.round(top)+'px';
+  }
+  function showPopover(anchor,items){
+    if(activePopover?.anchor===anchor){closePopover();return;}
+    closePopover();
+    const pop=document.createElement('div');pop.className='action-popover';
+    pop.innerHTML=items.map((it,i)=>`<button class="${it.danger?'danger':''}" data-pop="${i}">${it.label}</button>`).join('');
+    document.body.appendChild(pop);
+    const reposition=()=>{if(popoverPositionRaf)cancelAnimationFrame(popoverPositionRaf);popoverPositionRaf=requestAnimationFrame(positionPopover);};
+    const outside=e=>{if(!pop.contains(e.target)&&!anchor.contains(e.target))closePopover();};
+    activePopover={anchor,pop,reposition,outside};
+    pop.querySelectorAll('[data-pop]').forEach(b=>b.onclick=e=>{e.stopPropagation();const it=items[Number(b.dataset.pop)];closePopover();it.run();});
+    document.addEventListener('scroll',reposition,true);window.addEventListener('resize',reposition);
+    positionPopover();setTimeout(()=>{if(activePopover?.pop===pop)document.addEventListener('click',outside);},0);
+  }
   function showSetMenu(ei,si,anchor){const we=state.activeWorkout.exercises[ei],s=we.sets[si],ex=exercise(we.exerciseId);showPopover(anchor,[{label:'复制本组',run:()=>{we.sets.splice(si+1,0,JSON.parse(JSON.stringify({...s,done:false})));saveState();renderActiveWorkout();}},...(ex.type==='cardio'?[]:[{label:'递减组',run:()=>{s.drops=s.drops||[];const src=s.drops.length?s.drops[s.drops.length-1]:s;s.drops.push({weight:src.weight||'',reps:src.reps||''});saveState();renderActiveWorkout();}}]),{label:'删除本组',danger:true,run:()=>{we.sets.splice(si,1);saveState();renderActiveWorkout();}}]);}
   function showExerciseMenu(ei,anchor){const we=state.activeWorkout.exercises[ei],ex=exercise(we.exerciseId);showPopover(anchor,[{label:'动作讲解',run:()=>showTutorial(ex.id)},{label:'动作排序',run:()=>showReorderExercises()},{label:'动作替换',run:()=>showReplaceExercise(ei)},{label:'删除动作',danger:true,run:()=>{state.activeWorkout.exercises.splice(ei,1);saveState();renderActiveWorkout();}}]);}
   function showReorderExercises(){openModal('动作排序',`<div class="reorder-list">${state.activeWorkout.exercises.map((we,i)=>`<div class="reorder-item"><span>☰</span><strong>${esc(exercise(we.exerciseId).name)}</strong><div><button data-move-up="${i}">↑</button><button data-move-down="${i}">↓</button></div></div>`).join('')}</div>`);document.querySelectorAll('[data-move-up]').forEach(b=>b.onclick=()=>moveExercise(Number(b.dataset.moveUp),-1));document.querySelectorAll('[data-move-down]').forEach(b=>b.onclick=()=>moveExercise(Number(b.dataset.moveDown),1));}
@@ -1212,33 +1251,37 @@
   function layeredMuscleMap(ex){
     const primary=canonicalMuscles(ex.primary||ex.group),secondary=canonicalMuscles(ex.secondary||'').filter(x=>!primary.includes(x));
     const specs={
-      '胸大肌':{id:'pectoralis_major',label:'胸大肌',side:'front',anchor:[270,143],paths:['M237 126 C248 117 260 119 268 130 L267 157 C254 163 241 158 233 147Z','M272 130 C280 119 292 117 303 126 L307 147 C299 158 286 163 273 157Z']},
-      '三角肌前束':{id:'front_deltoid',label:'前三角',side:'front',anchor:[225,139],paths:['M215 126 C221 113 233 112 241 121 L237 150 C229 157 220 153 215 145Z','M299 121 C307 112 319 113 325 126 L325 145 C320 153 311 157 303 150Z']},
-      '三角肌中束':{id:'middle_deltoid',label:'中三角',side:'front',anchor:[215,142],paths:['M207 129 C210 115 221 108 232 114 L226 153 C216 160 208 153 205 143Z','M308 114 C319 108 330 115 333 129 L335 143 C332 153 324 160 314 153Z']},
-      '肱二头肌':{id:'biceps',label:'肱二头肌',side:'front',anchor:[205,187],paths:['M196 157 C207 151 216 158 217 173 L211 210 C203 219 193 211 192 199Z','M323 173 C324 158 333 151 344 157 L348 199 C347 211 337 219 329 210Z']},
-      '前臂肌群':{id:'forearms',label:'前臂',side:'front',anchor:[181,244],paths:['M188 207 C199 204 207 213 204 226 L190 273 C181 281 171 274 173 261Z','M336 213 C344 204 355 207 367 261 C369 274 359 281 350 273 L336 226Z']},
-      '腹直肌':{id:'abs',label:'腹直肌',side:'front',anchor:[270,208],paths:['M257 163 C265 160 275 160 283 163 L284 248 C276 258 264 258 256 248Z']},
-      '腹斜肌':{id:'obliques',label:'腹斜肌',side:'front',anchor:[241,213],paths:['M236 159 C246 159 253 167 254 180 L252 248 C242 252 234 242 230 224Z','M286 180 C287 167 294 159 304 159 L310 224 C306 242 298 252 288 248Z']},
-      '髋屈肌群':{id:'hip_flexors',label:'髋屈肌群',side:'front',anchor:[270,271],paths:['M237 250 L267 257 L261 286 L240 279Z','M273 257 L303 250 L300 279 L279 286Z']},
-      '股四头肌':{id:'quads',label:'股四头肌',side:'front',anchor:[242,340],paths:['M234 283 C249 274 263 286 264 305 L257 393 C247 407 232 399 229 382Z','M276 305 C277 286 291 274 306 283 L311 382 C308 399 293 407 283 393Z']},
-      '内收肌群':{id:'adductors',label:'内收肌群',side:'front',anchor:[270,334],paths:['M254 284 L270 302 L266 382 L252 348Z','M270 302 L286 284 L288 348 L274 382Z']},
-      '斜方肌':{id:'trapezius',label:'斜方肌',side:'back',anchor:[510,133],paths:['M477 111 C489 103 499 106 510 119 C521 106 531 103 543 111 L548 161 L510 190 L472 161Z']},
-      '菱形肌':{id:'rhomboids',label:'菱形肌',side:'back',anchor:[510,168],paths:['M488 144 L510 122 L532 144 L527 191 L493 191Z']},
-      '背阔肌':{id:'lats',label:'背阔肌',side:'back',anchor:[475,206],paths:['M469 169 C484 161 499 172 501 191 L497 253 C484 265 470 253 462 232Z','M519 191 C521 172 536 161 551 169 L558 232 C550 253 536 265 523 253Z']},
-      '竖脊肌':{id:'erector_spinae',label:'竖脊肌',side:'back',anchor:[510,222],paths:['M501 184 L509 194 L507 260 L497 247Z','M511 194 L519 184 L523 247 L513 260Z']},
-      '三角肌后束':{id:'rear_deltoid',label:'后三角',side:'back',anchor:[463,143],paths:['M452 127 C459 113 472 112 481 122 L477 153 C468 161 458 157 452 148Z','M539 122 C548 112 561 113 568 127 L568 148 C562 157 552 161 543 153Z']},
-      '肩袖外旋肌':{id:'rotator_cuff',label:'肩袖',side:'back',anchor:[486,158],paths:['M480 139 C488 132 500 137 505 147 L501 174 C490 181 481 175 477 166Z','M515 147 C520 137 532 132 540 139 L543 166 C539 175 530 181 519 174Z']},
-      '肱三头肌':{id:'triceps',label:'肱三头肌',side:'back',anchor:[447,190],paths:['M438 157 C449 151 458 159 459 174 L453 211 C445 220 435 212 434 200Z','M561 174 C562 159 571 151 582 157 L586 200 C585 212 575 220 567 211Z']},
-      '臀大肌':{id:'glutes',label:'臀大肌',side:'back',anchor:[535,286],paths:['M470 254 C486 243 503 249 509 267 L508 306 C494 319 478 314 469 300Z','M511 267 C517 249 534 243 550 254 L551 300 C542 314 526 319 512 306Z']},
-      '腘绳肌群':{id:'hamstrings',label:'腘绳肌',side:'back',anchor:[541,356],paths:['M478 307 C492 300 505 311 506 329 L501 394 C491 405 480 396 474 383Z','M514 329 C515 311 528 300 542 307 L546 383 C540 396 529 405 519 394Z']},
-      '腓肠肌':{id:'calves',label:'小腿',side:'back',anchor:[540,431],paths:['M477 397 C490 390 501 401 502 418 L497 466 C488 480 477 471 473 456Z','M518 418 C519 401 530 390 543 397 L547 456 C543 471 532 480 523 466Z']}
+      '胸大肌':{id:'pectoralis_major',label:'胸大肌',side:'front',anchor:[219,142],paths:['M218 123 C229 114 245 115 257 128 L257 158 C243 165 226 159 216 146 C215 137 216 129 218 123Z','M263 128 C275 115 291 114 302 123 C304 129 305 137 304 146 C294 159 277 165 263 158Z']},
+      '三角肌前束':{id:'front_deltoid',label:'前三角',side:'front',anchor:[208,143],paths:['M209 126 C216 118 225 118 233 125 L227 157 C219 163 211 158 207 150Z','M287 125 C295 118 304 118 311 126 L313 150 C309 158 301 163 293 157Z']},
+      '三角肌中束':{id:'middle_deltoid',label:'中三角',side:'front',anchor:[190,145],paths:['M205 119 C192 117 181 127 178 142 C177 154 183 164 193 169 C203 158 208 142 210 127Z','M315 127 C317 142 322 158 332 169 C342 164 348 154 347 142 C344 127 333 117 320 119Z']},
+      '肱二头肌':{id:'biceps',label:'肱二头肌',side:'front',anchor:[190,187],paths:['M187 160 C198 154 207 161 208 176 L203 207 C196 217 186 210 185 198Z','M312 176 C313 161 322 154 333 160 L335 198 C334 210 324 217 317 207Z']},
+      '前臂肌群':{id:'forearms',label:'前臂',side:'front',anchor:[169,231],paths:['M179 204 C189 201 197 210 194 223 L177 257 C172 267 162 264 160 254 L171 216Z','M326 210 C334 201 342 204 349 216 L360 254 C358 264 348 267 343 257 L326 223Z']},
+      '腹直肌':{id:'abs',label:'腹直肌',side:'front',anchor:[260,209],paths:['M250 165 C255 162 258 163 258 171 L257 191 C254 195 249 194 247 190Z','M262 171 C262 163 265 162 270 165 L273 190 C271 194 266 195 263 191Z','M247 196 C251 193 256 194 258 198 L257 219 C253 223 248 222 245 217Z','M262 198 C264 194 269 193 273 196 L275 217 C272 222 267 223 263 219Z','M245 223 C249 220 254 221 257 225 L256 247 C252 252 247 250 244 245Z','M263 225 C266 221 271 220 275 223 L276 245 C273 250 268 252 264 247Z']},
+      '腹斜肌':{id:'obliques',label:'腹斜肌',side:'front',anchor:[232,214],paths:['M224 160 C235 160 244 169 245 184 L241 245 C232 248 224 238 220 222Z','M275 184 C276 169 285 160 296 160 L300 222 C296 238 288 248 279 245Z']},
+      '髋屈肌群':{id:'hip_flexors',label:'髋屈肌群',side:'front',anchor:[241,267],paths:['M231 247 L258 256 L254 284 C244 285 235 280 229 272Z','M262 256 L289 247 L291 272 C285 280 276 285 266 284Z']},
+      '股四头肌':{id:'quads',label:'股四头肌',side:'front',anchor:[236,337],paths:['M233 284 C242 279 251 286 253 300 L249 350 C244 357 237 353 234 343Z','M230 349 C238 344 247 351 248 365 L243 400 C237 408 230 402 228 391Z','M267 300 C269 286 278 279 287 284 L286 343 C283 353 276 357 271 350Z','M272 365 C273 351 282 344 290 349 L292 391 C290 402 283 408 277 400Z']},
+      '内收肌群':{id:'adductors',label:'内收肌群',side:'front',anchor:[253,331],paths:['M251 284 L259 300 L256 383 L246 348Z','M261 300 L269 284 L274 348 L264 383Z']},
+      '斜方肌':{id:'trapezius',label:'斜方肌',side:'back',anchor:[520,130],paths:['M487 108 C498 102 507 105 520 119 C533 105 542 102 553 108 L547 143 L520 162 L493 143Z','M493 144 L520 162 L547 144 L538 194 L520 207 L502 194Z']},
+      '菱形肌':{id:'rhomboids',label:'菱形肌',side:'back',anchor:[520,174],paths:['M499 148 L520 132 L518 190 L499 180Z','M520 132 L541 148 L541 180 L522 190Z']},
+      '背阔肌':{id:'lats',label:'背阔肌',side:'back',anchor:[552,207],paths:['M476 161 C492 157 507 170 508 190 L501 251 C488 264 473 252 465 230Z','M532 190 C533 170 548 157 564 161 L575 230 C567 252 552 264 539 251Z']},
+      '竖脊肌':{id:'erector_spinae',label:'竖脊肌',side:'back',anchor:[520,226],paths:['M510 187 L518 195 L516 261 L505 249Z','M522 195 L530 187 L535 249 L524 261Z']},
+      '三角肌后束':{id:'rear_deltoid',label:'后三角',side:'back',anchor:[555,143],paths:['M465 120 C452 118 441 128 438 143 C438 155 444 164 454 169 C464 158 469 143 471 128Z','M569 128 C571 143 576 158 586 169 C596 164 602 155 602 143 C599 128 588 118 575 120Z']},
+      '肩袖外旋肌':{id:'rotator_cuff',label:'肩袖',side:'back',anchor:[553,161],paths:['M474 137 C484 130 497 135 503 147 L498 176 C487 183 477 177 472 167Z','M537 147 C543 135 556 130 566 137 L568 167 C563 177 553 183 542 176Z']},
+      '肱三头肌':{id:'triceps',label:'肱三头肌',side:'back',anchor:[583,188],paths:['M446 160 C457 154 466 161 467 176 L462 208 C455 218 445 210 444 198Z','M573 176 C574 161 583 154 594 160 L596 198 C595 210 585 218 578 208Z']},
+      '臀大肌':{id:'glutes',label:'臀大肌',side:'back',anchor:[546,285],paths:['M476 251 C492 242 510 248 518 265 L517 305 C503 319 485 314 475 300Z','M522 265 C530 248 548 242 564 251 L565 300 C555 314 537 319 523 305Z']},
+      '腘绳肌群':{id:'hamstrings',label:'腘绳肌',side:'back',anchor:[550,351],paths:['M480 307 C492 301 504 309 507 326 L503 392 C495 403 484 397 479 383Z','M533 326 C536 309 548 301 560 307 L561 383 C556 397 545 403 537 392Z']},
+      '腓肠肌':{id:'calves',label:'小腿',side:'back',anchor:[551,427],paths:['M481 394 C493 387 503 398 504 415 L499 459 C491 474 480 466 477 451Z','M536 415 C537 398 547 387 559 394 L563 451 C560 466 549 474 541 459Z']}
     };
     const active=[...new Set([...primary,...secondary])].filter(name=>specs[name]);
     const color=name=>primary.includes(name)?'#f5222d':secondary.includes(name)?'#ff9f1a':'#d9dfe8';
-    const figure=(cx,back=false)=>`<g class="anatomy-model ${back?'back':'front'}"><ellipse class="anatomy-skin" cx="${cx}" cy="75" rx="25" ry="31"/><path class="anatomy-hair" d="M${cx-25} 70 C${cx-25} 45 ${cx-10} 37 ${cx+2} 43 C${cx+15} 34 ${cx+28} 48 ${cx+25} 68 L${cx+17} 57 C${cx+5} 62 ${cx-6} 58 ${cx-18} 63Z"/><path class="anatomy-skin" d="M${cx-12} 101 L${cx+12} 101 L${cx+16} 118 L${cx-16} 118Z"/><path class="anatomy-skin" d="M${cx-17} 113 C${cx-42} 115 ${cx-55} 126 ${cx-60} 149 L${cx-52} 249 L${cx-35} 279 L${cx-42} 382 L${cx-35} 474 L${cx-15} 474 L${cx-7} 391 L${cx-2} 298 L${cx+2} 298 L${cx+7} 391 L${cx+15} 474 L${cx+35} 474 L${cx+42} 382 L${cx+35} 279 L${cx+52} 249 L${cx+60} 149 C${cx+55} 126 ${cx+42} 115 ${cx+17} 113 C${cx+8} 122 ${cx-8} 122 ${cx-17} 113Z"/><path class="anatomy-skin" d="M${cx-54} 137 C${cx-69} 139 ${cx-78} 154 ${cx-80} 174 L${cx-93} 225 L${cx-111} 273 L${cx-99} 280 L${cx-76} 235 L${cx-58} 190Z"/><path class="anatomy-skin" d="M${cx+54} 137 C${cx+69} 139 ${cx+78} 154 ${cx+80} 174 L${cx+93} 225 L${cx+111} 273 L${cx+99} 280 L${cx+76} 235 L${cx+58} 190Z"/><path class="anatomy-hand" d="M${cx-111} 271 L${cx-121} 284 L${cx-118} 289 L${cx-108} 281 L${cx-114} 294 L${cx-109} 298 L${cx-99} 281Z"/><path class="anatomy-hand" d="M${cx+111} 271 L${cx+121} 284 L${cx+118} 289 L${cx+108} 281 L${cx+114} 294 L${cx+109} 298 L${cx+99} 281Z"/><path class="anatomy-foot" d="M${cx-37} 470 C${cx-48} 481 ${cx-45} 490 ${cx-31} 491 L${cx-12} 487 L${cx-15} 474Z"/><path class="anatomy-foot" d="M${cx+37} 470 C${cx+48} 481 ${cx+45} 490 ${cx+31} 491 L${cx+12} 487 L${cx+15} 474Z"/></g>`;
-    const regions=Object.entries(specs).flatMap(([name,s])=>s.paths.map(d=>`<path class="anatomy-muscle" data-muscle="${s.id}" d="${d}" fill="${color(name)}"/>`)).join('');
-    const labels=side=>{const names=active.filter(name=>specs[name].side===side).sort((a,b)=>specs[a].anchor[1]-specs[b].anchor[1]);if(!names.length)return '';const min=110,max=458,gap=34,ys=names.map(name=>clamp(specs[name].anchor[1],min,max));for(let i=1;i<ys.length;i++)ys[i]=Math.max(ys[i],ys[i-1]+gap);if(ys.at(-1)>max){const shift=ys.at(-1)-max;ys.forEach((_,i)=>ys[i]-=shift);}return names.map((name,i)=>{const spec=specs[name],[x,y]=spec.anchor,c=color(name),front=side==='front',bend=front?133:647,end=front?110:670,textX=front?102:678,align=front?'end':'start';return `<g class="heatmap-label"><path d="M${x} ${y} L${bend} ${ys[i]} L${end} ${ys[i]}" stroke="${c}"/><circle cx="${x}" cy="${y}" r="3" stroke="${c}"/><text x="${textX}" y="${ys[i]+5}" text-anchor="${align}" fill="${c}">${spec.label}</text></g>`;}).join('');};
-    return `<div class="heatmap-wrap formal layered"><svg viewBox="0 0 780 520" class="heatmap-svg anatomy-svg" role="img" aria-label="${esc(ex.name)}训练肌群图"><text class="body-view-label" x="270" y="24" text-anchor="middle">正面</text><text class="body-view-label" x="510" y="24" text-anchor="middle">背面</text>${figure(270)}${figure(510,true)}<g class="anatomy-regions">${regions}</g>${labels('front')}${labels('back')}</svg><div class="heatmap-legend"><span><i class="red"></i>主要训练肌群</span><span><i class="orange"></i>辅助训练肌群</span><span><i class="gray"></i>非主要肌群</span></div></div>`;
+    const frontShapes=['M243 104 C229 106 215 114 207 128 C200 144 204 164 212 183 L224 240 C228 258 237 272 247 282 L273 282 C283 272 292 258 296 240 L308 183 C316 164 320 144 313 128 C305 114 291 106 277 104 C272 111 248 111 243 104Z','M211 123 C194 121 181 132 177 150 L169 199 L150 248 C147 258 151 265 160 268 C168 268 173 262 177 254 L193 214 L205 176 L220 145Z','M309 123 C326 121 339 132 343 150 L351 199 L370 248 C373 258 369 265 360 268 C352 268 347 262 343 254 L327 214 L315 176 L300 145Z','M247 270 C236 285 229 304 229 326 L235 389 L228 455 L250 459 L260 392 L262 303 L260 278Z','M273 270 C284 285 291 304 291 326 L285 389 L292 455 L270 459 L260 392 L258 303 L260 278Z'];
+    const backShapes=['M503 104 C489 106 475 114 467 128 C460 144 464 164 472 183 L484 240 C488 258 497 272 507 282 L533 282 C543 272 552 258 556 240 L568 183 C576 164 580 144 573 128 C565 114 551 106 537 104 C532 111 508 111 503 104Z','M471 123 C454 121 441 132 437 150 L429 199 L410 248 C407 258 411 265 420 268 C428 268 433 262 437 254 L453 214 L465 176 L480 145Z','M569 123 C586 121 599 132 603 150 L611 199 L630 248 C633 258 629 265 620 268 C612 268 607 262 603 254 L587 214 L575 176 L560 145Z','M507 270 C496 285 489 304 489 326 L495 389 L488 455 L510 459 L520 392 L522 303 L520 278Z','M533 270 C544 285 551 304 551 326 L545 389 L552 455 L530 459 L520 392 L518 303 L520 278Z'];
+    const frontFigure=`<g class="anatomy-model front"><ellipse class="anatomy-skin" cx="260" cy="68" rx="22" ry="27"/><path class="anatomy-hair" d="M238 66 C238 45 251 38 261 42 C274 35 286 48 282 67 L275 55 C264 59 253 57 243 62Z"/><path class="anatomy-skin" d="M248 91 L272 91 L278 110 C269 116 251 116 242 110Z"/>${frontShapes.map(d=>`<path class="anatomy-skin" d="${d}"/>`).join('')}<path class="anatomy-hand" d="M151 246 C142 255 140 269 147 277 L154 266 L153 282 L160 283 L163 267 L166 280 L172 277 L169 258Z"/><path class="anatomy-hand" d="M369 246 C378 255 380 269 373 277 L366 266 L367 282 L360 283 L357 267 L354 280 L348 277 L351 258Z"/><path class="anatomy-foot" d="M228 452 C216 463 217 475 231 478 L252 474 L250 458Z"/><path class="anatomy-foot" d="M292 452 C304 463 303 475 289 478 L268 474 L270 458Z"/></g>`;
+    const backFigure=`<g class="anatomy-model back"><ellipse class="anatomy-skin" cx="520" cy="68" rx="22" ry="27"/><path class="anatomy-hair" d="M498 66 C498 45 511 38 521 42 C534 35 546 48 542 67 L535 55 C524 59 513 57 503 62Z"/><path class="anatomy-skin" d="M508 91 L532 91 L538 110 C529 116 511 116 502 110Z"/>${backShapes.map(d=>`<path class="anatomy-skin" d="${d}"/>`).join('')}<path class="anatomy-hand" d="M411 246 C402 255 400 269 407 277 L414 266 L413 282 L420 283 L423 267 L426 280 L432 277 L429 258Z"/><path class="anatomy-hand" d="M629 246 C638 255 640 269 633 277 L626 266 L627 282 L620 283 L617 267 L614 280 L608 277 L611 258Z"/><path class="anatomy-foot" d="M488 452 C476 463 477 475 491 478 L512 474 L510 458Z"/><path class="anatomy-foot" d="M552 452 C564 463 563 475 549 478 L528 474 L530 458Z"/></g>`;
+    const clipSeed=`muscle-${String(ex.id||'exercise').replace(/[^a-z0-9_-]/gi,'')}`;
+    const regions=side=>Object.entries(specs).filter(([,s])=>s.side===side).flatMap(([name,s])=>s.paths.map(d=>`<path class="anatomy-muscle" data-muscle="${s.id}" d="${d}" fill="${color(name)}"/>`)).join('');
+    const labels=side=>{const names=active.filter(name=>specs[name].side===side).sort((a,b)=>specs[a].anchor[1]-specs[b].anchor[1]);if(!names.length)return '';const min=105,max=448,gap=32,ys=names.map(name=>clamp(specs[name].anchor[1],min,max));for(let i=1;i<ys.length;i++)ys[i]=Math.max(ys[i],ys[i-1]+gap);if(ys.at(-1)>max){const shift=ys.at(-1)-max;ys.forEach((_,i)=>ys[i]-=shift);}return names.map((name,i)=>{const spec=specs[name],[x,y]=spec.anchor,c=color(name),front=side==='front',bend=front?132:648,end=front?108:672,textX=front?100:680,align=front?'end':'start';return `<g class="heatmap-label"><path d="M${x} ${y} L${bend} ${ys[i]} L${end} ${ys[i]}" stroke="${c}"/><circle cx="${x}" cy="${y}" r="3" stroke="${c}"/><text x="${textX}" y="${ys[i]+5}" text-anchor="${align}" fill="${c}">${spec.label}</text></g>`;}).join('');};
+    return `<div class="heatmap-wrap formal layered anatomy-v33"><svg viewBox="0 0 780 500" class="heatmap-svg anatomy-svg" role="img" aria-label="${esc(ex.name)}训练肌群图"><defs><clipPath id="${clipSeed}-front">${frontShapes.map(d=>`<path d="${d}"/>`).join('')}</clipPath><clipPath id="${clipSeed}-back">${backShapes.map(d=>`<path d="${d}"/>`).join('')}</clipPath></defs><text class="body-view-label" x="260" y="24" text-anchor="middle">正面</text><text class="body-view-label" x="520" y="24" text-anchor="middle">背面</text>${frontFigure}${backFigure}<g class="anatomy-regions" clip-path="url(#${clipSeed}-front)">${regions('front')}</g><g class="anatomy-regions" clip-path="url(#${clipSeed}-back)">${regions('back')}</g>${labels('front')}${labels('back')}</svg><div class="heatmap-legend"><span><i class="red"></i>主要训练肌群</span><span><i class="orange"></i>辅助训练肌群</span><span><i class="gray"></i>非主要肌群</span></div></div>`;
   }
 
   function formatVideoDuration(seconds){
@@ -1408,7 +1451,7 @@
   document.getElementById('modal-close').onclick=closeModal;
   modal.addEventListener('click',e=>{ if(e.target===modal)closeModal(); });
 
-  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.3.0').catch(()=>{}));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&page==='home')renderHome();});
   scheduleDateRefresh();
   render();
