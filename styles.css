@@ -187,8 +187,8 @@ html,body{overflow-x:clip}
 .anatomy-fixed-v35 .heatmap-svg{display:block;width:100%!important;height:auto!important;aspect-ratio:940/740!important;background:#fff;shape-rendering:geometricPrecision;text-rendering:geometricPrecision}
 .anatomy-fixed-v35 .muscle-block{transition:none!important}
 .anatomy-fixed-v35 .heatmap-labels{pointer-events:none}
-.anatomy-fixed-v35 .heatmap-label text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:14px!important;font-weight:800;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.heatmap-wrap.formal.layered.anatomy-fixed-v35 .heatmap-label text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:20px!important;font-weight:800;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
 .anatomy-fixed-v35 .heatmap-legend{padding:8px 4px 6px!important;gap:12px!important;font-size:10px!important;border-top:1px solid #f0f1f3}
 .muscle-map-loading{display:grid;place-items:center;width:100%;aspect-ratio:940/740;background:#fff;color:#9aa2ae;font-size:12px}
 .muscle-map-empty{padding:18px;text-align:center;line-height:1.6}
-@media(max-width:390px){.anatomy-fixed-v35 .heatmap-label text{font-size:15px!important}.anatomy-fixed-v35 .heatmap-legend{gap:8px!important;font-size:9px!important}}
+@media(max-width:480px){.heatmap-wrap.formal.layered.anatomy-fixed-v35 .heatmap-label text{font-size:26px!important}.anatomy-fixed-v35 .heatmap-legend{gap:8px!important;font-size:9px!important}}

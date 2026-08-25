@@ -1,8 +1,8 @@
-const APP_CACHE='train-log-v343-local';
+const APP_CACHE='train-log-v345-local';
 // Keep the existing media cache across app releases so cached GIFs do not
 // flash blank or download again after every deployment.
 const MEDIA_CACHE='train-log-media-v31';
-const ASSETS=['./','./index.html','./styles.css?v=3.4.3','./muscle-map.js?v=3.4.3','./app.js?v=3.4.3','./exercise-muscle-mappings.json?v=3.4.3','./assets/标准人体.svg?v=4','./manifest.webmanifest','./assets/icon-180.png','./assets/icon-192.png','./assets/icon-512.png'];
+const ASSETS=['./','./index.html','./styles.css?v=3.4.5','./muscle-map.js?v=3.4.5','./app.js?v=3.4.5','./exercise-muscle-mappings.json?v=3.4.5','./assets/标准人体.svg?v=4','./manifest.webmanifest','./assets/icon-180.png','./assets/icon-192.png','./assets/icon-512.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(APP_CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>![APP_CACHE,MEDIA_CACHE].includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
