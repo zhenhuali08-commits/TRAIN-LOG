@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
 
-  const CONFIG_URL='./exercise-muscle-mappings.json?v=3.4.3';
+  const CONFIG_URL='./exercise-muscle-mappings.json?v=3.5.0';
   const HOST_SELECTOR='[data-muscle-map]:not([data-muscle-map-ready])';
   const SVG_NS='http://www.w3.org/2000/svg';
   const EXPECTED_TEMPLATE_HASH='301CB13731FC3902E6F7C072EE3B1515859FB58A1BFD48E08B85CE577D04F697';
@@ -24,7 +24,7 @@
     if(hash&&hash!==(config.templateSha256||EXPECTED_TEMPLATE_HASH)) errors.push(`人体模板哈希不匹配：${hash}`);
     if(config.templateSha256!==EXPECTED_TEMPLATE_HASH) errors.push('映射表未绑定已锁定的人体模板哈希');
     if(paths.size!==90) errors.push(`人体模板肌肉 path 数量应为 90，当前为 ${paths.size}`);
-    if(exerciseEntries.length!==config.expectedExerciseCount||exerciseEntries.length!==73) errors.push(`动作映射应为 73 个，当前为 ${exerciseEntries.length}`);
+    if(exerciseEntries.length!==config.expectedExerciseCount) errors.push(`动作映射应为 ${config.expectedExerciseCount} 个，当前为 ${exerciseEntries.length}`);
     Object.entries(config.regions||{}).forEach(([regionId,region])=>{
       if(!paths.has(region.target)) errors.push(`${regionId} 的引线目标不存在：${region.target}`);
       (region.paths||[]).forEach(pathId=>{if(!paths.has(pathId)) errors.push(`${regionId} 引用了不存在的 path：${pathId}`);});

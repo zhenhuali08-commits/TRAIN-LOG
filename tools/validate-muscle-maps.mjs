@@ -7,7 +7,10 @@ const config=JSON.parse(fs.readFileSync('exercise-muscle-mappings.json','utf8'))
 const svg=fs.readFileSync('assets/标准人体.svg','utf8');
 const app=fs.readFileSync('app.js','utf8');
 const exerciseSource=app.slice(app.indexOf('const EXERCISES = ['),app.indexOf('// V2.5 全动作实用讲解'));
-const appIds=[...new Set([...exerciseSource.matchAll(/\{id:'([^']+)'/g)].map(match=>match[1]))].filter(id=>!removed.has(id));
+const originalIds=[...new Set([...exerciseSource.matchAll(/\{id:'([^']+)'/g)].map(match=>match[1]))].filter(id=>!removed.has(id));
+const addedSource=fs.readFileSync('new-content.js','utf8').split('const regionNames=')[0];
+const addedIds=[...addedSource.matchAll(/^\s*\['([^']+)','/gm)].map(match=>match[1]);
+const appIds=[...originalIds,...addedIds];
 const mappedIds=Object.keys(config.exercises);
 const pathIds=new Set([...svg.matchAll(/<path\b(?=[^>]*\bclass="muscle-block")(?=[^>]*\bid="([^"]+)")[^>]*>/g)].map(match=>match[1]));
 const errors=[];
@@ -16,8 +19,10 @@ const hash=crypto.createHash('sha256').update(svg).digest('hex').toUpperCase();
 if(hash!==expectedHash) errors.push(`冻结人体哈希改变：${hash}`);
 if(config.templateSha256!==expectedHash) errors.push('映射表未绑定冻结人体哈希');
 if(pathIds.size!==90) errors.push(`独立肌肉 path 应为 90，当前 ${pathIds.size}`);
-if(mappedIds.length!==73) errors.push(`动作映射应为 73，当前 ${mappedIds.length}`);
-if(appIds.length!==73) errors.push(`应用动作应为 73，当前 ${appIds.length}`);
+if(new Set(appIds).size!==appIds.length) errors.push('应用动作 ID 存在重复');
+if(addedIds.length!==63) errors.push(`新增动作应为 63，当前 ${addedIds.length}`);
+if(mappedIds.length!==config.expectedExerciseCount) errors.push(`动作映射应为 ${config.expectedExerciseCount}，当前 ${mappedIds.length}`);
+if(appIds.length!==config.expectedExerciseCount) errors.push(`应用动作应为 ${config.expectedExerciseCount}，当前 ${appIds.length}`);
 appIds.filter(id=>!config.exercises[id]).forEach(id=>errors.push(`缺少动作映射：${id}`));
 mappedIds.filter(id=>!appIds.includes(id)).forEach(id=>errors.push(`多余动作映射：${id}`));
 
