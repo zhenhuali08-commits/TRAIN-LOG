@@ -14,6 +14,7 @@ const check=(condition,message)=>{if(!condition)errors.push(message);};
 check(ids.length===63,`新增动作数量 ${ids.length}，应为 63`);
 check(new Set(ids).size===ids.length,'新增动作 ID 重复');
 check(ids.every(id=>!oldLive.has(id)),'新增动作与原动作库 ID 重复');
+check(!ids.includes('bent_over_biceps_curl'),'俯身杠铃弯举沿用原杠铃弯举，不应新增');
 check(ids.every(id=>names[id]),'新增动作缺少中文名称');
 check(Object.keys(videos).length===62,`视频数量 ${Object.keys(videos).length}，应为 62`);
 check(!videos.band_high_shoulder_external_rotation,'唯一未匹配视频应留空');
@@ -55,14 +56,17 @@ if(process.argv[2]){
       '',
       '同一动作 ID 在动作库、计划编辑、训练中和历史记录使用同一 GIF 映射。下表“待补充”的 GIF 不使用相似动作顶替。',
       '',
-      '| 动作 ID | 中文名称 | Gym Visual 数据集匹配 | 视频 UP 主 / BV 号 |',
-      '| --- | --- | --- | --- |'
+      '新增计划（10 个）：'+content.programs.map(program=>program.name).join('、')+'。',
+      '',
+      '| 动作 ID | 中文名称 | Gym Visual 数据集匹配 | 视频 UP 主 | BV 号 | 时长 | B 站嵌入地址 |',
+      '| --- | --- | --- | --- | --- | --- | --- |'
     ];
     for(const ex of content.exercises){
       const path=gifs[ex.id],row=byPath.get(path),video=videos[ex.id];
       const gifText=row?`#${row.id} ${row.name} · ${path}`:'待补充准确 GIF';
-      const videoText=video?`${video.author} · ${video.bvid}`:'待补充对应视频';
-      lines.push(`| \`${ex.id}\` | ${ex.name} | ${gifText} | ${videoText} |`);
+      const duration=video?`${Math.floor(video.duration/60)}:${String(video.duration%60).padStart(2,'0')}`:'—';
+      const embed=video?`https://player.bilibili.com/player.html?bvid=${video.bvid}&page=${video.page||1}&autoplay=1&danmaku=0&high_quality=1`:'—';
+      lines.push(`| \`${ex.id}\` | ${ex.name} | ${gifText} | ${video?.author||'—'} | ${video?.bvid||'—'} | ${duration} | ${embed} |`);
     }
     lines.push('', '素材来源：[数据集说明](https://github.com/hasaneyldrm/exercises-dataset)；[媒体使用条款](https://github.com/hasaneyldrm/exercises-dataset/blob/main/NOTICE.md)。', '');
     fs.writeFileSync('NEW_MEDIA_AUDIT.md',lines.join('\n'));
