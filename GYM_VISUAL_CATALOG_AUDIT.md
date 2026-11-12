@@ -30,7 +30,7 @@
 | `front_back_leg_swing` | 站姿前后摆腿 | 350213 | Back Forward Leg Swings (male) | 标题、器械匹配 |
 | `side_leg_swing` | 站姿左右摆腿 | 463013 | Side To Side Leg Swings (male) | 标题、器械匹配 |
 | `arm_circles` | 站姿手臂绕环 | 390513 | Arm Circles | 标题匹配 |
-| `standing_trunk_rotation` | 站姿躯干转体 | 340813；965313 | Standing Upper Body Rotation (female)；Standing Torso Twist Arms Swing (male) | 前者含下蹲，后者甩臂；都与当前双臂抱胸的要点不完全对应 |
+| `standing_trunk_rotation` | 站姿躯干转体 | 181313 | Standing Back Rotation Stretch | 预览帧确认站姿、双臂抱胸、躯干转动；比 340813（含下蹲）和 965313（甩臂）更准确，GIF 文件仍待取得 |
 | `hip_90_90_switch` | 90/90 髋关节切换 | 455513 | Dynamic 90 90 Hip Twist | 标题、姿势匹配 |
 | `adductor_rockback` | 内收肌后坐 | 189813；257113 | Kneeling Leg Out Adductor Stretch；Rocking Frog Stretch | 前者一腿侧伸、后者后坐；尚未找到兼有两者的准确动图 |
 | `knee_to_wall_ankle_mobility` | 膝触墙踝关节活动 | 196913 | Mobilization Of Ankle Stretch | 相近，需核对是否膝触墙、脚跟不离地 |
@@ -47,13 +47,12 @@
 
 ## 动态画面复核
 
-另从公开动作库的 180 px 预览片段抽样首、中、末帧，核对官方参考号对应的动作轨迹；预览片段只用于审查，未作为本站素材发布。约 28 个动作找到了轨迹基本一致的预览；`worlds_greatest_stretch` 的 463313 版本包含胸椎转体，区别于先前 1324 数据集中的 160413 版本。
+另从公开动作库的 180 px 预览片段抽样首、中、末帧，核对官方参考号对应的动作轨迹；预览片段只用于审查，未作为本站素材发布。36 个待补动作中，29 个找到了轨迹基本一致的预览，另外 7 个仍需准确素材；`worlds_greatest_stretch` 的 463313 版本包含胸椎转体，区别于先前 1324 数据集中的 160413 版本。站姿躯干转体改用 181313，站姿、双臂抱胸、转体轨迹与现有动作说明相符。
 
 以下候选被画面复核否定，不能直接接入：
 
 - 弹力带高位肩外旋：836313 只做单臂，不符合已确认的双臂高位动作。
 - 扶椅坐站：1016813 是无扶椅动作的箱式深蹲。
-- 站姿躯干转体：340813 带下蹲；965313 带手臂甩动，均与当前动作要点不一致。
 - 膝触墙踝关节活动：196913 是坐姿踝关节活动；1056313 是膝触箱，并非触墙。
 - 行进弓步转体：168813 原地弓步转体，没有确认连续前行。
 - 内收肌后坐：189813 是侧伸腿静态拉伸；257113 是双腿蛙式后坐，均未完全对应单腿侧伸的后坐动作。
