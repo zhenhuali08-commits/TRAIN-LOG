@@ -27,7 +27,7 @@
     ['chest_supported_row','背','哑铃/上斜凳','lats,rhomboids','rear_deltoids,biceps','0327','胸口贴稳上斜凳，肩膀放松','肘部向后拉，顶端轻收肩胛','胸口离凳甩动','耸肩拉到脖子'],
     ['seated_calf_raise','小腿','器械','calves','', '0594','调整压垫固定大腿，前脚掌踩踏板','脚跟缓慢下降后充分踮起','快速弹动跟腱','只做很小的半程'],
     ['machine_hip_abduction','臀','器械','glutes','', '0597','坐稳并调整挡板贴住大腿外侧','向外打开到舒适范围，再控制合拢','身体后仰甩开挡板','配重回程撞击'],
-    ['pause_back_squat','腿','杠铃','quads,glutes','adductors,erector_spinae',null,'下蹲到底部可控位置停顿 1–2 秒','保持腹压与足底稳定后再站起','底部放松塌腰','利用反弹跳过停顿'],
+    ['pause_back_squat','腿','杠铃','quads,glutes','adductors,erector_spinae','0043','下蹲到底部可控位置停顿 1–2 秒','保持腹压与足底稳定后再站起','底部放松塌腰','利用反弹跳过停顿'],
     ['barbell_front_squat','腿','杠铃','quads','glutes,rectus_abdominis','0042','杠铃稳放前三角，肘部朝前抬高','躯干尽量直立，膝盖跟随脚尖','肘部下掉导致杠铃滚落','脚跟抬起或膝盖内扣'],
     ['weighted_plank','腹','负重片','rectus_abdominis,obliques','glutes','2135','先能稳定完成自重平板，再少量加重','负重放在上背，身体保持直线','负重直接压在腰椎','塌腰或抬臀太高'],
     ['cable_lateral_raise','肩','绳索','lateral_deltoids','upper_trapezius','0178','双手交叉握住绳索把手，肩膀自然下沉','手臂沿身体侧面抬至肩高附近','耸肩抢力','躯干摆动甩起'],
