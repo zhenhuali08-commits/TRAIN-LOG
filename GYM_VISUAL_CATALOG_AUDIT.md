@@ -30,17 +30,32 @@
 | `front_back_leg_swing` | 站姿前后摆腿 | 350213 | Back Forward Leg Swings (male) | 标题、器械匹配 |
 | `side_leg_swing` | 站姿左右摆腿 | 463013 | Side To Side Leg Swings (male) | 标题、器械匹配 |
 | `arm_circles` | 站姿手臂绕环 | 390513 | Arm Circles | 标题匹配 |
-| `standing_trunk_rotation` | 站姿躯干转体 | 340813 | Standing Upper Body Rotation (female) | 标题相近，需核对骨盆稳定、手臂位置 |
+| `standing_trunk_rotation` | 站姿躯干转体 | 340813；965313 | Standing Upper Body Rotation (female)；Standing Torso Twist Arms Swing (male) | 前者含下蹲，后者甩臂；都与当前双臂抱胸的要点不完全对应 |
 | `hip_90_90_switch` | 90/90 髋关节切换 | 455513 | Dynamic 90 90 Hip Twist | 标题、姿势匹配 |
 | `adductor_rockback` | 内收肌后坐 | 189813；257113 | Kneeling Leg Out Adductor Stretch；Rocking Frog Stretch | 前者一腿侧伸、后者后坐；尚未找到兼有两者的准确动图 |
 | `knee_to_wall_ankle_mobility` | 膝触墙踝关节活动 | 196913 | Mobilization Of Ankle Stretch | 相近，需核对是否膝触墙、脚跟不离地 |
 | `walking_hamstring_sweep` | 行进式腘绳肌扫地 | — | — | 官方 GIF 表未找到准确候选 |
 | `standing_quad_stretch` | 站姿股四头肌拉伸 | 105913 | Standing Quadriceps Stretch | 标题、姿势匹配 |
 | `half_kneeling_hip_flexor_stretch` | 半跪姿髋屈肌拉伸 | 105313 | Kneeling Hip Flexor Stretch | 需核对是否半跪、骨盆后倾 |
-| `supine_figure_four_stretch` | 仰卧四字臀肌拉伸 | 193513 | Lying Cross Over Knee Pull Up Stretch | 比笼统的臀肌拉伸更接近；需核对是否四字交叉、无他人辅助 |
+| `supine_figure_four_stretch` | 仰卧四字臀肌拉伸 | 105613 | Lying Glute Stretch | 预览帧确认四字交叉、双手抱腿、无人辅助 |
 | `doorway_chest_stretch` | 门框胸肌拉伸 | 755313 | Doorway Chest Stretch (male) | 标题、姿势匹配 |
 | `cross_body_shoulder_stretch` | 横臂肩后侧拉伸 | 198013 | Across Chest Shoulder Stretch | 标题、姿势匹配 |
-| `childs_pose` | 婴儿式 | 094513 | Child Pose | 标题、姿势匹配 |
+| `childs_pose` | 婴儿式 | 094513；813013 | Child Pose；Moving Child Pose (female) | 前者静态且未取得预览片段；后者动态循环预览与婴儿式动作一致 |
 | `single_knee_to_chest_stretch` | 仰卧单膝抱胸拉伸 | 181013 | Lying Knee To Chest Stretch | 标题、姿势匹配 |
 
 官方目录的产品预览与源文件分开提供；目录 ID 可用来定位素材，不能直接替代可播放 GIF。`NEW_MEDIA_AUDIT.md` 的待补状态在拿到文件并验过动作前保持不变。
+
+## 动态画面复核
+
+另从公开动作库的 180 px 预览片段抽样首、中、末帧，核对官方参考号对应的动作轨迹；预览片段只用于审查，未作为本站素材发布。约 28 个动作找到了轨迹基本一致的预览；`worlds_greatest_stretch` 的 463313 版本包含胸椎转体，区别于先前 1324 数据集中的 160413 版本。
+
+以下候选被画面复核否定，不能直接接入：
+
+- 弹力带高位肩外旋：836313 只做单臂，不符合已确认的双臂高位动作。
+- 扶椅坐站：1016813 是无扶椅动作的箱式深蹲。
+- 站姿躯干转体：340813 带下蹲；965313 带手臂甩动，均与当前动作要点不一致。
+- 膝触墙踝关节活动：196913 是坐姿踝关节活动；1056313 是膝触箱，并非触墙。
+- 行进弓步转体：168813 原地弓步转体，没有确认连续前行。
+- 内收肌后坐：189813 是侧伸腿静态拉伸；257113 是双腿蛙式后坐，均未完全对应单腿侧伸的后坐动作。
+- 暂停杠铃深蹲：501612 是视频产品；官方 GIF 表中没有该动作 GIF。
+- 行进式腘绳肌扫地：官方 GIF 表与另一份 7,110 动作目录均未搜到准确条目。
