@@ -1,0 +1,16 @@
+AGENTS.md
+.git/
+.qa-media/
+.wrangler/
+*.md
+*.bak
+wrangler.toml
+wrangler.toml.example
+functions/
+migrations/
+tools/
+template-work/
+back-reference-crop.png
+front-reference-crop.png
+muscle-map-preview-v3.png
+muscle-map-preview.png
