@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
 
-  const CONFIG_URL='./exercise-muscle-mappings.json?v=3.5.0';
+  const CONFIG_URL='./exercise-muscle-mappings.json?v=3.6.0';
   const HOST_SELECTOR='[data-muscle-map]:not([data-muscle-map-ready])';
   const SVG_NS='http://www.w3.org/2000/svg';
   const EXPECTED_TEMPLATE_HASH='301CB13731FC3902E6F7C072EE3B1515859FB58A1BFD48E08B85CE577D04F697';

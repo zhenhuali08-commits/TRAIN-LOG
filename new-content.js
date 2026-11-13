@@ -40,7 +40,7 @@
     ['bodyweight_reverse_lunge','腿','自重','quads,glutes','hamstrings',null,'一脚后撤并控制双膝弯曲','前脚全掌发力回到站姿','前膝明显内扣','上身摇晃失去平衡'],
     ['bodyweight_good_morning','臀','自重','hamstrings,glutes','erector_spinae',null,'双脚站稳，膝盖略弯','髋部向后推，保持背部自然伸展后站起','弯腰驼背','变成大幅屈膝下蹲'],
     ['bird_dog','腹','自重','rectus_abdominis,obliques','glutes,erector_spinae',null,'四足跪稳，对侧手脚缓慢伸远','骨盆与胸口保持朝地','身体左右摇摆','抬腿过高导致塌腰'],
-    ['mountain_climber','有氧','自重','rectus_abdominis','hip_flexors,anterior_deltoids','0630','高平板姿势收紧腹部','双腿交替向胸前提膝，呼吸连贯','肩膀垮下去','身体大幅上下弹跳'],
+    ['mountain_climber','腹','自重','rectus_abdominis','hip_flexors,anterior_deltoids','0630','高平板姿势收紧腹部','双腿交替向胸前提膝，呼吸连贯','肩膀垮下去','身体大幅上下弹跳'],
     ['side_plank','腹','自重','obliques','glutes,lateral_deltoids','0705','前臂支撑在肩下，身体侧向成直线','收紧腹斜肌和臀部，保持正常呼吸','臀部下沉','肩膀耸起压迫颈部'],
     ['barbell_hip_thrust','臀','杠铃/长凳','glutes','hamstrings,quads',null,'上背靠凳，杠铃垫好髋部','双脚踩稳，顶端收臀并保持肋骨下沉','用腰椎反弓顶重量','顶端膝盖向内塌'],
     ['worlds_greatest_stretch','拉伸','自重','hip_flexors,adductors','obliques,hamstrings',null,'进入长弓步，手掌撑地','同侧手臂带动胸椎向上旋转，换边重复','前脚脚跟翘起','硬拧腰椎代替胸椎旋转'],

@@ -2,10 +2,11 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.5.3';
+  const VERSION = '3.6.0';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
+  const THEMES=[['classic','经典蓝','#1677ff'],['teal','青绿','#007f79'],['purple','紫色','#6e4ac5'],['coral','珊瑚橙','#bb552f']];
 
   const EXERCISES = [
     {id:'bench_press',name:'杠铃卧推',group:'胸',equipment:'杠铃',muscles:['胸','三头','肩'],primary:'胸大肌',secondary:'肱三头肌、三角肌前束',tips:['肩胛骨向后下方收紧并稳定贴住凳面','双脚踩稳地面，保持躯干稳定','杠铃下降至胸部附近后平稳推起，不要弹胸'],mistakes:['肩膀前顶、肩胛失去稳定','手腕过度后折','为了重量牺牲下放控制'],rest:'2–3 分钟'},
@@ -277,6 +278,7 @@
   const NEW_CONTENT=window.TRAIN_LOG_NEW_CONTENT||{exercises:[],programs:[]};
   const NEW_EXERCISE_IDS=new Set(NEW_CONTENT.exercises.map(ex=>ex.id));
   EXERCISES.push(...NEW_CONTENT.exercises);
+  ['plank','side_plank','dead_hang_grip'].forEach(id=>{const ex=EXERCISES.find(x=>x.id===id);if(ex)ex.metric='sec';});
   const BASE_PLAN_IDS=new Set(['p1','p2','p3','p4']);
 
   let PLAN = [
@@ -295,6 +297,7 @@
   ];
   const BASE_PLANS=JSON.parse(JSON.stringify(PLAN));
   const LIBRARY_PROGRAMS=JSON.parse(JSON.stringify(NEW_CONTENT.programs));
+  const PROGRAM_CATEGORIES=['基础训练','经典分化','专业力量','专项强化','减脂塑形','跑步专项力量','自定义'];
   PLAN.push(...LIBRARY_PROGRAMS);
   function mergeLibraryPlans(saved,settings={}){
     const deleted=new Set(settings.deletedProgramIds||[]);
@@ -414,7 +417,7 @@
     plans:JSON.parse(JSON.stringify(PLAN)),
     meta:{updatedAt:new Date().toISOString(),lastBackupAt:null,storage:'indexeddb'},
     wellness:{sleep:3,energy:3,soreness:2,updated:today()},
-    settings:{restSeconds:120,dietMode:'training'},customExercises:[]
+    settings:{restSeconds:120,dietMode:'training',theme:'classic'},customExercises:[]
   });
 
   let state = loadState();
@@ -423,9 +426,11 @@
   state.workouts=Array.isArray(state.workouts)?state.workouts:[];
   state.customExercises=Array.isArray(state.customExercises)?state.customExercises:[];
   state.settings={...defaultState().settings,...(state.settings||{})};
+  applyTheme();
   state.wellness={...defaultState().wellness,...(state.wellness||{})};
   state.plans=mergeLibraryPlans(state.plans,state.settings);PLAN=state.plans;
   let page = 'home';
+  let activeProgramCategory='全部';
   let timerInterval = null;
   let restRemaining = 0;
   let activeExerciseFilter = '全部';
@@ -457,6 +462,8 @@
   function uid(){ return (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`); }
   function today(){ return new Date().toISOString().slice(0,10); }
   function esc(v=''){ return String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+  function applyTheme(){document.documentElement.dataset.theme=THEMES.some(([id])=>id===state.settings?.theme)?state.settings.theme:'classic';}
+  function themeSettingsHTML(){return `<section class="section"><div class="card"><div class="section-title">主题颜色</div><div class="theme-grid">${THEMES.map(([id,label,color])=>`<button class="theme-choice ${state.settings.theme===id?'active':''}" data-theme-option="${id}" aria-pressed="${state.settings.theme===id}"><i style="--swatch:${color}"></i><span>${label}</span></button>`).join('')}</div></div></section>`;}
   function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
   function num(v){ const n=parseFloat(v); return Number.isFinite(n)?n:null; }
   function round(v,d=1){ const p=10**d; return Math.round(v*p)/p; }
@@ -532,6 +539,7 @@
       const indexed=await readIndexedState();
       if(indexed){state=indexed;PLAN=state.plans;}
       else{state=normalizeState(state);PLAN=state.plans;await writeIndexedState(state,true);}
+      applyTheme();
       storageReady=true;
       try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
       render();
@@ -576,6 +584,7 @@
   function latestWorkout(){ return [...state.workouts].sort((a,b)=>new Date(b.endedAt)-new Date(a.endedAt))[0] || null; }
   function legacyPlans(){return PLAN.filter(p=>BASE_PLAN_IDS.has(p.id));}
   function libraryPlans(){return PLAN.filter(p=>Array.isArray(p.days));}
+  function programCategory(p){return p.category||LIBRARY_PROGRAMS.find(x=>x.id===p.id)?.category||'自定义';}
   function nextPlan(){const base=legacyPlans(),last=[...state.workouts].sort((a,b)=>new Date(b.endedAt)-new Date(a.endedAt)).find(w=>BASE_PLAN_IDS.has(w.planId));if(!last)return base[0];const idx=base.findIndex(p=>p.id===last.planId);return base[(idx+1)%base.length];}
   function totalVolume(w){ return round((w.exercises||[]).flatMap(e=>e.sets||[]).filter(s=>s.done&&!s.warmup).reduce((sum,s)=>sum+(Number(s.weight)||0)*(Number(s.reps)||0)+(s.drops||[]).reduce((a,d)=>a+(Number(d.weight)||0)*(Number(d.reps)||0),0),0),0); }
   function workingSets(w){ return (w.exercises||[]).flatMap(e=>e.sets||[]).filter(s=>s.done&&!s.warmup).length; }
@@ -588,7 +597,7 @@
     const values=pts.map(p=>Number(p.weight)),min=Math.min(...values)-.5,max=Math.max(...values)+.5,w=320,h=150,pad=20,span=Math.max(1,max-min);
     const xy=pts.map((p,i)=>[pad+i*(w-2*pad)/(pts.length-1),h-pad-(Number(p.weight)-min)/span*(h-2*pad)]);
     const path=xy.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
-    return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="体重趋势"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#e7e9ee"/><path d="${path}" fill="none" stroke="#1677ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${xy.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fff" stroke="#1677ff" stroke-width="2"/><text x="${p[0]}" y="${p[1]-8}" text-anchor="middle" font-size="8" fill="#707681">${values[i]}</text>`).join('')}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="体重趋势"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#e7e9ee"/><path d="${path}" fill="none" stroke="var(--blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${xy.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fff" stroke="var(--blue)" stroke-width="2"/><text x="${p[0]}" y="${p[1]-8}" text-anchor="middle" font-size="8" fill="#707681">${values[i]}</text>`).join('')}</svg>`;
   }
   function strengthStats(){
     const map={};
@@ -693,13 +702,14 @@
     for(const w of ws){ const e=(w.exercises||[]).find(x=>x.exerciseId===exId); if(e && e.sets.some(s=>s.done))return {workout:w,entry:e}; }
     return null;
   }
-  function setSummary(sets, ex=null){ const done=sets.filter(s=>s.done); if(ex?.type==='cardio') return done.map(s=>`${s.minutes||s.reps||0} min`).join(' / '); return done.map(s=>`${s.weight||0}×${s.reps||0}`).join(' / '); }
+  function setSummary(sets, ex=null){ const done=sets.filter(s=>s.done); if(ex?.type==='cardio') return done.map(s=>`${s.minutes||s.reps||0} min`).join(' / '); if(ex?.metric==='sec')return done.map(s=>`${s.reps||0} 秒`).join(' / '); return done.map(s=>`${s.weight||0}×${s.reps||0}`).join(' / '); }
   function progressionMessage(we){
     const plan=planById(state.activeWorkout?.planId || '');
     const spec=we.target?[we.exerciseId,we.target.sets,we.target.min,we.target.max]:plan?.exercises?.find(x=>x[0]===we.exerciseId);
     if(!spec)return '';
     const [,targetSets,minRep,maxRep]=spec;
     if(exercise(we.exerciseId).type==='cardio')return `目标 ${targetSets} 组 × ${minRep}–${maxRep} 分钟`;
+    if(exercise(we.exerciseId).metric==='sec')return `目标 ${targetSets} 组 × ${minRep}–${maxRep} 秒`;
     const done=we.sets.filter(s=>s.done&&!s.warmup);
     if(done.length<targetSets)return `目标 ${targetSets} 组 × ${minRep}–${maxRep} 次`;
     const allTop=done.slice(0,targetSets).every(s=>Number(s.reps)>=maxRep);
@@ -771,17 +781,21 @@
     document.getElementById('wellness-btn').onclick=showWellness;
   }
 
-  function renderTraining(){
+  function renderTraining(categoryScrollLeft){
     if(state.activeWorkout){ renderActiveWorkout(); return; }
     const history=[...state.workouts].sort((a,b)=>new Date(b.endedAt)-new Date(a.endedAt));
     const next=nextPlan();
+    const plans=libraryPlans();
+    const shownPlans=plans.filter(p=>activeProgramCategory==='全部'||programCategory(p)===activeProgramCategory);
     main.innerHTML=`
       ${pageIntro('训练','训练计划和当天训练合在一起，按第 1 → 4 练循环，不绑定星期几。')}
       <div class="card current-plan"><div class="small muted">建议下一练</div><h2>${esc(next.name)}</h2><div class="small muted">${next.exercises.length} 个动作 · 第 ${next.index} 练</div><button class="primary-btn" style="margin-top:14px" data-start-plan="${next.id}">开始训练</button><button class="secondary-btn neutral free-training-btn" style="margin-top:9px;width:100%" id="free-workout-btn">＋ 自由训练</button></div>
       <section class="section"><div class="section-head"><div class="section-title">四练计划</div></div>${legacyPlans().map(p=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${p.index}</div><div class="plan-info"><strong>${esc(p.name)}</strong><small>${p.exercises.length} 个动作 · ${esc(p.note)}</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-plan="${p.id}">查看动作</button><button class="secondary-btn" data-start-plan="${p.id}">开始训练</button></div></div>`).join('')}</section>
-      <section class="section"><div class="section-head"><div class="section-title">计划库</div><button class="section-link" id="create-program-btn">＋ 自定义计划</button></div>${libraryPlans().map(p=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${p.days.length}</div><div class="plan-info"><strong>${esc(p.name)}</strong><small>${esc(p.note||`${p.days.length} 练`)} · ${p.days.length} 个训练日</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-program="${esc(p.id)}">查看与编辑</button><button class="secondary-btn" data-start-program="${esc(p.id)}">选择训练日</button></div></div>`).join('')||'<div class="card empty">暂无计划，可创建自定义计划。</div>'}</section>
+      <section class="section"><div class="section-head"><div class="section-title">计划库 · ${plans.length} 套</div><button class="section-link" id="create-program-btn">＋ 自定义计划</button></div><div class="filter-chips program-filters">${['全部',...PROGRAM_CATEGORIES].map(category=>{const count=category==='全部'?plans.length:plans.filter(p=>programCategory(p)===category).length;return `<button class="chip ${activeProgramCategory===category?'active':''}" data-program-category="${category}">${category} ${count}</button>`;}).join('')}</div><div class="program-list">${shownPlans.map(p=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${p.days.length}</div><div class="plan-info"><strong>${esc(p.name)}</strong><small>${esc(p.note||`${p.days.length} 练`)} · ${p.days.length} 个训练日</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-program="${esc(p.id)}">查看与编辑</button><button class="secondary-btn" data-start-program="${esc(p.id)}">选择训练日</button></div></div>`).join('')||'<div class="card empty">当前分类暂无计划，可创建自定义计划。</div>'}</div></section>
       <section class="section"><div class="section-head"><div class="section-title">最近训练</div><button class="section-link" data-go="history">查看全部</button></div>${history.length?history.slice(0,3).map(historyItem).join(''):'<div class="card empty">还没有训练记录</div>'}</section>`;
     bindCommon();
+    if(categoryScrollLeft!==undefined)main.querySelector('.program-filters').scrollLeft=categoryScrollLeft;
+    document.querySelectorAll('[data-program-category]').forEach(b=>b.onclick=()=>{const scrollLeft=b.parentElement.scrollLeft;activeProgramCategory=b.dataset.programCategory;renderTraining(scrollLeft);});
     document.querySelectorAll('[data-view-plan]').forEach(b=>b.onclick=()=>showPlan(b.dataset.viewPlan));
     document.querySelectorAll('[data-view-program],[data-start-program]').forEach(b=>b.onclick=()=>showProgram(b.dataset.viewProgram||b.dataset.startProgram));
     document.getElementById('create-program-btn').onclick=createProgram;
@@ -904,16 +918,22 @@
   }
 
   function trainingExerciseHTML(we,idx){
-    const ex=exercise(we.exerciseId), prev=bestPreviousExercise(we.exerciseId,wId(state.activeWorkout)), cardio=ex.type==='cardio';
+    const ex=exercise(we.exerciseId), prev=bestPreviousExercise(we.exerciseId,wId(state.activeWorkout)), cardio=ex.type==='cardio',timed=ex.metric==='sec';
     return `<section class="training-exercise" data-ex-index="${idx}">
       <div class="training-exercise-head"><div class="exercise-thumb">${exerciseVisual(ex)}</div><div class="grow"><strong>${esc(ex.name)}</strong><small>${esc(ex.primary||ex.group)}${ex.rest?' · '+esc(ex.rest):''}</small>${prev?`<div class="last-result">上次：${esc(setSummary(prev.entry.sets,ex))}</div>`:''}</div><button class="exercise-menu-btn" data-ex-menu="${idx}" aria-label="动作菜单"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8 3.5-2.1-.8a6.3 6.3 0 0 0-.7-1.7l.9-2-2-2-2 .9a6.3 6.3 0 0 0-1.7-.7L12 3h-2.8l-.8 2.1a6.3 6.3 0 0 0-1.7.7l-2-.9-2 2 .9 2a6.3 6.3 0 0 0-.7 1.7L1 12v2.8l2.1.8c.2.6.4 1.2.7 1.7l-.9 2 2 2 2-.9c.5.3 1.1.6 1.7.7l.8 2.1H12l.8-2.1c.6-.2 1.2-.4 1.7-.7l2 .9 2-2-.9-2c.3-.5.6-1.1.7-1.7l2.1-.8V12Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button></div>
-      <div class="set-head ${cardio?'cardio':''}"><span>组</span>${cardio?'<span>min</span>':'<span>kg</span><span>次数</span>'}<span>完成</span><span></span></div>
+      <div class="set-head ${cardio||timed?'cardio':''}"><span>组</span>${cardio?'<span>min</span>':timed?'<span>秒</span>':'<span>kg</span><span>次数</span>'}<span>完成</span><span></span></div>
       <div class="set-rows">${we.sets.map((s,si)=>setRowHTML(ex,s,si)).join('')}</div>
       <div class="progression">${progressionMessage(we)}</div>
       <button class="text-btn" data-add-set="${idx}">＋ 添加一组</button>
     </section>`;
   }
-  function setRowHTML(ex,s,si){const cardio=ex.type==='cardio';const main=`<div class="set-row ${cardio?'cardio-row':''}" data-set-row="${si}"><button class="set-index ${s.warmup?'warm':''}" data-warmup="${si}">${s.warmup?'热':si+1}</button>${cardio?`<input class="set-input ${s.done?'completed-input':''}" inputmode="decimal" data-field="minutes" data-set="${si}" value="${esc(s.minutes??s.reps??'')}">`:`<input class="set-input ${s.done?'completed-input':''}" inputmode="decimal" data-field="weight" data-set="${si}" value="${esc(s.weight??'')}"><input class="set-input ${s.done?'completed-input':''}" inputmode="numeric" data-field="reps" data-set="${si}" value="${esc(s.reps??'')}">`}<button class="set-done ${s.done?'done':''}" data-done="${si}">${s.done?'✓':'○'}</button><button class="dots-btn" data-set-menu="${si}">•••</button></div>`;const drops=(s.drops||[]).map((d,di)=>`<div class="drop-row"><span class="drop-label">递${di+1}</span><input class="set-input ${s.done?'completed-input':''}" inputmode="decimal" data-drop-field="weight" data-drop="${di}" data-set="${si}" value="${esc(d.weight??'')}"><input class="set-input ${s.done?'completed-input':''}" inputmode="numeric" data-drop-field="reps" data-drop="${di}" data-set="${si}" value="${esc(d.reps??'')}"><button class="drop-plus" data-copy-drop="${si}:${di}">＋</button><button class="drop-delete" data-delete-drop="${si}:${di}">×</button></div>`).join('');return `<div class="set-block">${main}${drops}</div>`;}
+  function setRowHTML(ex,s,si){
+    const cardio=ex.type==='cardio',timed=ex.metric==='sec';
+    const input=cardio?`<input class="set-input ${s.done?'completed-input':''}" inputmode="decimal" data-field="minutes" data-set="${si}" value="${esc(s.minutes??s.reps??'')}">`:timed?`<input class="set-input ${s.done?'completed-input':''}" inputmode="numeric" data-field="reps" data-set="${si}" value="${esc(s.reps??'')}">`:`<input class="set-input ${s.done?'completed-input':''}" inputmode="decimal" data-field="weight" data-set="${si}" value="${esc(s.weight??'')}"><input class="set-input ${s.done?'completed-input':''}" inputmode="numeric" data-field="reps" data-set="${si}" value="${esc(s.reps??'')}">`;
+    const main=`<div class="set-row ${cardio||timed?'cardio-row':''}" data-set-row="${si}"><button class="set-index ${s.warmup?'warm':''}" data-warmup="${si}">${s.warmup?'热':si+1}</button>${input}<button class="set-done ${s.done?'done':''}" data-done="${si}">${s.done?'✓':'○'}</button><button class="dots-btn" data-set-menu="${si}">•••</button></div>`;
+    const drops=cardio||timed?'':(s.drops||[]).map((d,di)=>`<div class="drop-row"><span class="drop-label">递${di+1}</span><input class="set-input ${s.done?'completed-input':''}" inputmode="decimal" data-drop-field="weight" data-drop="${di}" data-set="${si}" value="${esc(d.weight??'')}"><input class="set-input ${s.done?'completed-input':''}" inputmode="numeric" data-drop-field="reps" data-drop="${di}" data-set="${si}" value="${esc(d.reps??'')}"><button class="drop-plus" data-copy-drop="${si}:${di}">＋</button><button class="drop-delete" data-delete-drop="${si}:${di}">×</button></div>`).join('');
+    return `<div class="set-block">${main}${drops}</div>`;
+  }
 
   function wId(w){return w?.id||null;}
   function timerHTML(){ return `<div class="timer-bar"><div><small>组间休息</small><strong id="rest-timer">${fmtTimer(restRemaining)}</strong></div><div class="grow"></div><button class="timer-btn" id="timer-plus">+30s</button><button class="timer-btn" id="timer-skip">跳过</button></div>`; }
@@ -966,7 +986,7 @@
     } else if(dataTab==='diet'){
       c.innerHTML=`<div class="card"><div class="tabs diet-tabs"><button class="tab ${dietMode==='training'?'active':''}" data-diet="training">训练日</button><button class="tab ${dietMode==='rest'?'active':''}" data-diet="rest">休息日</button><button class="tab ${dietMode==='cheat'?'active':''}" data-diet="cheat">放纵餐</button></div>${dietHTML(dietMode)}</div>`;document.querySelectorAll('[data-diet]').forEach(b=>b.onclick=()=>{dietMode=b.dataset.diet;dietBatch=0;state.settings.dietMode=dietMode;saveState();renderMine();});document.getElementById('shuffle-diet').onclick=()=>{const size=dietMode==='cheat'?CHEAT_MENUS.length:(dietMode==='rest'?REST_DIET_MENUS.length:DIET_MENUS.length);dietBatch=(dietBatch+1)%size;renderMine();};
     } else {
-      const backup=backupStatus();c.innerHTML=`<section class="section"><div class="card"><div class="stat-row"><span>默认组间休息</span><button class="pill blue" id="rest-setting">${state.settings.restSeconds} 秒</button></div><div class="stat-row"><span>训练记录</span><strong>${state.workouts.length} 次</strong></div><div class="stat-row"><span>数据保存</span><strong>${storageFallback?'本机兼容存储':'IndexedDB'}</strong></div><div class="stat-row"><span>上次备份</span><strong>${backup.date}</strong></div><div class="stat-row backup-status-row ${backup.warning?'warning':''}"><span>备份状态</span><strong>${backup.text}</strong></div></div></section><div class="backup-grid"><button class="backup-action" id="export-btn">一键备份</button><button class="backup-action" id="import-btn">一键恢复</button></div><input id="import-file" type="file" accept="application/json,.json" hidden><div class="note ${backup.warning?'backup-reminder':''}" style="margin-top:12px">${backup.warning?'建议备份训练数据。':''} 数据保存在当前手机的 IndexedDB；换手机或清理浏览器数据后，可用 JSON 备份一键恢复。</div>`;document.getElementById('rest-setting').onclick=showRestSetting;document.getElementById('export-btn').onclick=exportData;document.getElementById('import-btn').onclick=()=>document.getElementById('import-file').click();document.getElementById('import-file').onchange=e=>importDataFile(e.target.files?.[0]);
+      const backup=backupStatus();c.innerHTML=`<section class="section"><div class="card"><div class="stat-row"><span>默认组间休息</span><button class="pill blue" id="rest-setting">${state.settings.restSeconds} 秒</button></div><div class="stat-row"><span>训练记录</span><strong>${state.workouts.length} 次</strong></div><div class="stat-row"><span>数据保存</span><strong>${storageFallback?'本机兼容存储':'IndexedDB'}</strong></div><div class="stat-row"><span>上次备份</span><strong>${backup.date}</strong></div><div class="stat-row backup-status-row ${backup.warning?'warning':''}"><span>备份状态</span><strong>${backup.text}</strong></div></div></section><div class="backup-grid"><button class="backup-action" id="export-btn">一键备份</button><button class="backup-action" id="import-btn">一键恢复</button></div><input id="import-file" type="file" accept="application/json,.json" hidden><div class="note ${backup.warning?'backup-reminder':''}" style="margin-top:12px">${backup.warning?'建议备份训练数据。':''} 数据保存在当前手机的 IndexedDB；换手机或清理浏览器数据后，可用 JSON 备份一键恢复。</div>`;c.querySelector('section.section').insertAdjacentHTML('afterend',themeSettingsHTML());document.querySelectorAll('[data-theme-option]').forEach(b=>b.onclick=()=>{state.settings.theme=b.dataset.themeOption;applyTheme();saveState();renderMine();});document.getElementById('rest-setting').onclick=showRestSetting;document.getElementById('export-btn').onclick=exportData;document.getElementById('import-btn').onclick=()=>document.getElementById('import-file').click();document.getElementById('import-file').onchange=e=>importDataFile(e.target.files?.[0]);
     }
     if(c && !c.innerHTML.trim()){dataTab='body';setTimeout(()=>{if(page==='mine')renderMine();},0);}
   }
@@ -1126,7 +1146,7 @@
     document.addEventListener('scroll',reposition,true);window.addEventListener('resize',reposition);
     positionPopover();setTimeout(()=>{if(activePopover?.pop===pop)document.addEventListener('click',outside);},0);
   }
-  function showSetMenu(ei,si,anchor){const we=state.activeWorkout.exercises[ei],s=we.sets[si],ex=exercise(we.exerciseId);showPopover(anchor,[{label:'复制本组',run:()=>{we.sets.splice(si+1,0,JSON.parse(JSON.stringify({...s,done:false})));saveState();renderActiveWorkout();}},...(ex.type==='cardio'?[]:[{label:'递减组',run:()=>{s.drops=s.drops||[];const src=s.drops.length?s.drops[s.drops.length-1]:s;s.drops.push({weight:src.weight||'',reps:src.reps||''});saveState();renderActiveWorkout();}}]),{label:'删除本组',danger:true,run:()=>{we.sets.splice(si,1);saveState();renderActiveWorkout();}}]);}
+  function showSetMenu(ei,si,anchor){const we=state.activeWorkout.exercises[ei],s=we.sets[si],ex=exercise(we.exerciseId);showPopover(anchor,[{label:'复制本组',run:()=>{we.sets.splice(si+1,0,JSON.parse(JSON.stringify({...s,done:false})));saveState();renderActiveWorkout();}},...(ex.type==='cardio'||ex.metric==='sec'?[]:[{label:'递减组',run:()=>{s.drops=s.drops||[];const src=s.drops.length?s.drops[s.drops.length-1]:s;s.drops.push({weight:src.weight||'',reps:src.reps||''});saveState();renderActiveWorkout();}}]),{label:'删除本组',danger:true,run:()=>{we.sets.splice(si,1);saveState();renderActiveWorkout();}}]);}
   function showExerciseMenu(ei,anchor){const we=state.activeWorkout.exercises[ei],ex=exercise(we.exerciseId);showPopover(anchor,[{label:'动作讲解',run:()=>showTutorial(ex.id)},{label:'动作排序',run:()=>showReorderExercises()},{label:'动作替换',run:()=>showReplaceExercise(ei)},{label:'删除动作',danger:true,run:()=>{state.activeWorkout.exercises.splice(ei,1);saveState();renderActiveWorkout();}}]);}
   function showReorderExercises(){openModal('动作排序',`<div class="reorder-list">${state.activeWorkout.exercises.map((we,i)=>`<div class="reorder-item"><span>☰</span><strong>${esc(exercise(we.exerciseId).name)}</strong><div><button data-move-up="${i}">↑</button><button data-move-down="${i}">↓</button></div></div>`).join('')}</div>`);document.querySelectorAll('[data-move-up]').forEach(b=>b.onclick=()=>moveExercise(Number(b.dataset.moveUp),-1));document.querySelectorAll('[data-move-down]').forEach(b=>b.onclick=()=>moveExercise(Number(b.dataset.moveDown),1));}
   function moveExercise(i,d){const a=state.activeWorkout.exercises,j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];saveState();showReorderExercises();}
@@ -1163,11 +1183,11 @@
 
   function createProgram(){
     openModal('创建自定义计划',`<div class="form-grid"><div class="field full"><label>计划名称</label><input id="program-new-name" placeholder="例如：我的三练计划"></div><div class="field full"><label>说明</label><input id="program-new-note" placeholder="例如：每周 3 练"></div></div><button class="primary-btn" id="program-create-save" style="margin-top:14px">创建计划</button>`);
-    document.getElementById('program-create-save').onclick=()=>{const name=document.getElementById('program-new-name').value.trim();if(!name){toast('先填写计划名称');return;}const p={id:'program_'+uid(),name,note:document.getElementById('program-new-note').value.trim()||'自定义计划',days:[{name:'第 1 练',exercises:[]}]};PLAN.push(p);saveState();renderTraining();showProgram(p.id);};
+    document.getElementById('program-create-save').onclick=()=>{const name=document.getElementById('program-new-name').value.trim();if(!name){toast('先填写计划名称');return;}const p={id:'program_'+uid(),name,category:'自定义',note:document.getElementById('program-new-note').value.trim()||'自定义计划',days:[{name:'第 1 练',exercises:[]}]};PLAN.push(p);activeProgramCategory='自定义';saveState();renderTraining();showProgram(p.id);};
   }
   function showProgram(id){
     const p=planById(id);if(!p||!Array.isArray(p.days))return;
-    openModal(p.name,`<div class="form-grid"><div class="field full"><label>计划名称</label><input id="program-name" value="${esc(p.name)}"></div><div class="field full"><label>计划说明</label><input id="program-note" value="${esc(p.note||'')}"></div></div><button class="secondary-btn neutral" id="program-rename" style="width:100%;margin-top:10px">保存名称与说明</button><section class="section"><div class="section-head"><div class="section-title">训练日 · ${p.days.length}</div></div>${p.days.map((d,i)=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${i+1}</div><div class="plan-info"><strong>${esc(d.name)}</strong><small>${d.exercises.length} 个动作</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-program-day="${i}">查看与编辑</button><button class="secondary-btn" data-program-start="${i}">开始训练</button></div></div>`).join('')}</section><button class="secondary-btn neutral" id="program-add-day" style="width:100%">＋ 添加训练日</button><button class="secondary-btn danger" id="program-delete" style="width:100%;margin-top:10px">删除计划</button>`);
+    openModal(p.name,`${p.description?`<div class="info-note">${esc(p.description)}${programCategory(p)==='跑步专项力量'?' 单侧动作按每侧计数；静态保持按秒记录。':''}</div>`:''}<div class="form-grid"><div class="field full"><label>计划名称</label><input id="program-name" value="${esc(p.name)}"></div><div class="field full"><label>计划说明</label><input id="program-note" value="${esc(p.note||'')}"></div></div><button class="secondary-btn neutral" id="program-rename" style="width:100%;margin-top:10px">保存名称与说明</button><section class="section"><div class="section-head"><div class="section-title">训练日 · ${p.days.length}</div></div>${p.days.map((d,i)=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${i+1}</div><div class="plan-info"><strong>${esc(d.name)}</strong><small>${d.exercises.length} 个动作</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-program-day="${i}">查看与编辑</button><button class="secondary-btn" data-program-start="${i}">开始训练</button></div></div>`).join('')}</section><button class="secondary-btn neutral" id="program-add-day" style="width:100%">＋ 添加训练日</button><button class="secondary-btn danger" id="program-delete" style="width:100%;margin-top:10px">删除计划</button>`);
     document.getElementById('program-rename').onclick=()=>{const name=document.getElementById('program-name').value.trim();if(!name){toast('计划名称不能为空');return;}p.name=name;p.note=document.getElementById('program-note').value.trim();saveState();renderTraining();showProgram(p.id);toast('计划已保存');};
     document.querySelectorAll('[data-program-day]').forEach(b=>b.onclick=()=>showProgramDay(p.id,Number(b.dataset.programDay)));
     document.querySelectorAll('[data-program-start]').forEach(b=>b.onclick=()=>startProgramDay(p.id,Number(b.dataset.programStart)));
@@ -1176,7 +1196,7 @@
   }
   function showProgramDay(programId,dayIndex){
     const p=planById(programId),d=p?.days?.[dayIndex];if(!d)return;
-    openModal(`${p.name} · ${d.name}`,`<div class="field"><label>训练日名称</label><input id="program-day-name" value="${esc(d.name)}"></div><button class="secondary-btn neutral" id="program-day-rename" style="width:100%;margin-top:10px">保存名称</button><div class="card flat plan-edit-list" style="margin-top:14px">${d.exercises.map(([eid,sets,min,max],i)=>{const e=exercise(eid);return `<div class="exercise-row plan-edit-row"><div class="exercise-thumb">${exerciseVisual(e)}</div><div class="grow plan-ex-copy"><strong>${esc(e.name)}</strong><small>${esc(e.group)} · ${esc(e.primary)}</small><div class="program-targets"><label>组<input type="number" min="1" max="20" data-day-field="${i}:1" value="${sets}"></label><label>最低<input type="number" min="1" max="100" data-day-field="${i}:2" value="${min}"></label><label>最高<input type="number" min="1" max="100" data-day-field="${i}:3" value="${max}"></label></div></div><div class="plan-mini-actions"><button data-day-up="${i}">↑</button><button data-day-down="${i}">↓</button><button data-day-replace="${i}">替</button><button data-day-delete="${i}">×</button></div></div>`;}).join('')||'<div class="empty">还没有动作，点击下方添加。</div>'}</div><button class="secondary-btn neutral" style="width:100%;margin-top:10px" id="program-day-add">＋ 添加动作</button><button class="primary-btn" style="margin-top:10px" id="program-day-start">开始训练</button><button class="secondary-btn danger" style="width:100%;margin-top:10px" id="program-day-delete">删除训练日</button>`);
+    openModal(`${p.name} · ${d.name}`,`<div class="field"><label>训练日名称</label><input id="program-day-name" value="${esc(d.name)}"></div><button class="secondary-btn neutral" id="program-day-rename" style="width:100%;margin-top:10px">保存名称</button><div class="card flat plan-edit-list" style="margin-top:14px">${d.exercises.map(([eid,sets,min,max],i)=>{const e=exercise(eid),unit=e.type==='cardio'?'分钟':e.metric==='sec'?'秒':'次';return `<div class="exercise-row plan-edit-row"><div class="exercise-thumb">${exerciseVisual(e)}</div><div class="grow plan-ex-copy"><strong>${esc(e.name)}</strong><small>${esc(e.group)} · ${esc(e.primary)}</small><div class="program-targets"><label>组<input type="number" min="1" max="20" data-day-field="${i}:1" value="${sets}"></label><label>最低${unit}<input type="number" min="1" max="100" data-day-field="${i}:2" value="${min}"></label><label>最高${unit}<input type="number" min="1" max="100" data-day-field="${i}:3" value="${max}"></label></div></div><div class="plan-mini-actions"><button data-day-up="${i}">↑</button><button data-day-down="${i}">↓</button><button data-day-replace="${i}">替</button><button data-day-delete="${i}">×</button></div></div>`;}).join('')||'<div class="empty">还没有动作，点击下方添加。</div>'}</div><button class="secondary-btn neutral" style="width:100%;margin-top:10px" id="program-day-add">＋ 添加动作</button><button class="primary-btn" style="margin-top:10px" id="program-day-start">开始训练</button><button class="secondary-btn danger" style="width:100%;margin-top:10px" id="program-day-delete">删除训练日</button>`);
     hydrateGymVisuals(document.getElementById('modal-body'));
     document.getElementById('program-day-rename').onclick=()=>{d.name=document.getElementById('program-day-name').value.trim()||d.name;saveState();renderTraining();showProgramDay(programId,dayIndex);};
     document.querySelectorAll('[data-day-field]').forEach(input=>input.onchange=()=>{const [i,col]=input.dataset.dayField.split(':').map(Number);const v=Math.max(1,Math.min(col===1?20:100,Number(input.value)||1));d.exercises[i][col]=v;if(d.exercises[i][3]<d.exercises[i][2])d.exercises[i][3]=d.exercises[i][2];input.value=String(d.exercises[i][col]);const maxInput=document.querySelector(`[data-day-field="${i}:3"]`);if(maxInput)maxInput.value=String(d.exercises[i][3]);saveState();});
@@ -1203,7 +1223,7 @@
   function exerciseVisual(ex,{priority=false}={}){
     const path=GYM_DIRECT[ex.id]||(NEW_EXERCISE_IDS.has(ex.id)?'':persistedGymMap[ex.id])||'';
     if(NEW_EXERCISE_IDS.has(ex.id)&&!path)return `<div class="gym-media-shell gym-media-pending"><span class="gym-loading">动图待补充</span></div>`;
-    return `<div class="gym-media-shell${priority?' priority':''}"><img class="gym-gif" data-gym-id="${ex.id}" data-gym-path="${esc(path)}" data-gym-priority="${priority?'1':'0'}" alt="${esc(ex.name)}" loading="${priority?'eager':'lazy'}" decoding="async" ${priority?'fetchpriority="high"':''} draggable="false"><span class="gym-loading">动作加载中</span></div>`;
+    return `<div class="gym-media-shell${priority?' priority':''}"><img class="gym-gif" data-gym-id="${ex.id}" data-gym-path="${esc(path)}" data-gym-priority="${priority?'1':'0'}" alt="${esc(ex.name)}" loading="${priority?'eager':'lazy'}" decoding="async" ${priority?'fetchpriority="high"':''} draggable="false"><span class="gym-loading">动作加载中</span>${ex.mediaNote?'<span class="gym-approx-label">示意</span>':''}</div>`;
   }
   async function loadGymIndex(force=false){if(force)gymIndexPromise=null;if(!gymIndexPromise)gymIndexPromise=fetch(GYM_DATA_URL,{cache:'force-cache'}).then(r=>r.ok?r.json():Promise.reject()).catch(()=>[]);return gymIndexPromise;}
   function norm(s=''){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
@@ -1430,7 +1450,7 @@
     const ex=exercise(id);modal.classList.add('tutorial-mode');
     if(modal.open){resetModalScroll();modal.close();}
     suspendGymVisuals(main);
-    openModal(ex.name,`<div class="learn-stack"><section class="learn-card navy"><div class="learn-no blue">01</div><h2>3D 动图</h2><p class="learn-desc">循环查看完整动作轨迹。</p><div class="learn-media white">${exerciseVisual(ex,{priority:true})}</div></section><section class="learn-card navy"><div class="learn-no blue">02</div><h2>视频讲解</h2><p class="learn-desc">短、直接，训练时快速复习动作重点。</p>${videoHTML(ex)}</section><section class="learn-card navy"><div class="learn-no blue">03</div><h2>动作要点</h2>${numberedList(ex.tips,'blue')}</section><section class="learn-card navy"><div class="learn-no orange">04</div><h2>常见错误</h2>${numberedList(ex.mistakes,'orange')}</section><section class="learn-card navy"><div class="learn-no orange">05</div><h2>训练肌群图</h2><p class="learn-desc">红色为主要训练肌群，橙色为辅助训练肌群。</p><div class="learn-media heat">${layeredMuscleMap(ex)}</div></section></div>`);
+    openModal(ex.name,`<div class="learn-stack"><section class="learn-card navy"><div class="learn-no blue">01</div><h2>3D 动图</h2><p class="learn-desc">${ex.mediaNote?esc(ex.mediaNote):'循环查看完整动作轨迹。'}</p><div class="learn-media white">${exerciseVisual(ex,{priority:true})}</div></section><section class="learn-card navy"><div class="learn-no blue">02</div><h2>视频讲解</h2><p class="learn-desc">短、直接，训练时快速复习动作重点。</p>${videoHTML(ex)}</section><section class="learn-card navy"><div class="learn-no blue">03</div><h2>动作要点</h2>${numberedList(ex.tips,'blue')}</section><section class="learn-card navy"><div class="learn-no orange">04</div><h2>常见错误</h2>${numberedList(ex.mistakes,'orange')}</section><section class="learn-card navy"><div class="learn-no orange">05</div><h2>训练肌群图</h2><p class="learn-desc">红色为主要训练肌群，橙色为辅助训练肌群。</p><div class="learn-media heat">${layeredMuscleMap(ex)}</div></section></div>`);
     resetTutorialScroll();
     hydrateGymVisuals(modalBody).finally(resetTutorialScroll);
     bindLocalTutorialVideos(modalBody);
@@ -1527,7 +1547,7 @@
   document.getElementById('modal-close').onclick=closeModal;
   modal.addEventListener('click',e=>{ if(e.target===modal)closeModal(); });
 
-  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.5.3').catch(()=>{}));
+  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.6.0').catch(()=>{}));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&page==='home')renderHome();});
   scheduleDateRefresh();
   render();

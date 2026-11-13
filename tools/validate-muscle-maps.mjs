@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
+import vm from 'node:vm';
 
 const expectedHash='301CB13731FC3902E6F7C072EE3B1515859FB58A1BFD48E08B85CE577D04F697';
 const removed=new Set(['hip_thrust','cable_kickback','ab_wheel','rowing_machine','jump_rope','swimming']);
@@ -10,7 +11,10 @@ const exerciseSource=app.slice(app.indexOf('const EXERCISES = ['),app.indexOf('/
 const originalIds=[...new Set([...exerciseSource.matchAll(/\{id:'([^']+)'/g)].map(match=>match[1]))].filter(id=>!removed.has(id));
 const addedSource=fs.readFileSync('new-content.js','utf8').split('const regionNames=')[0];
 const addedIds=[...addedSource.matchAll(/^\s*\['([^']+)','/gm)].map(match=>match[1]);
-const appIds=[...originalIds,...addedIds];
+const context=vm.createContext({window:{}});
+for(const file of ['new-videos.js','new-content.js','advanced-content.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
+const advancedIds=context.window.TRAIN_LOG_NEW_CONTENT.exercises.slice(addedIds.length).map(ex=>ex.id);
+const appIds=[...originalIds,...addedIds,...advancedIds];
 const mappedIds=Object.keys(config.exercises);
 const pathIds=new Set([...svg.matchAll(/<path\b(?=[^>]*\bclass="muscle-block")(?=[^>]*\bid="([^"]+)")[^>]*>/g)].map(match=>match[1]));
 const errors=[];
@@ -21,6 +25,7 @@ if(config.templateSha256!==expectedHash) errors.push('映射表未绑定冻结�
 if(pathIds.size!==90) errors.push(`独立肌肉 path 应为 90，当前 ${pathIds.size}`);
 if(new Set(appIds).size!==appIds.length) errors.push('应用动作 ID 存在重复');
 if(addedIds.length!==63) errors.push(`新增动作应为 63，当前 ${addedIds.length}`);
+if(advancedIds.length!==38) errors.push(`扩展动作应为 38，当前 ${advancedIds.length}`);
 if(mappedIds.length!==config.expectedExerciseCount) errors.push(`动作映射应为 ${config.expectedExerciseCount}，当前 ${mappedIds.length}`);
 if(appIds.length!==config.expectedExerciseCount) errors.push(`应用动作应为 ${config.expectedExerciseCount}，当前 ${appIds.length}`);
 appIds.filter(id=>!config.exercises[id]).forEach(id=>errors.push(`缺少动作映射：${id}`));
