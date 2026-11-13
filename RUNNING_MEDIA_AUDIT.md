@@ -10,34 +10,46 @@
 
 ## 素材来源与对应
 
-- 循环 GIF 来自固定版本 [`hasaneyldrm/exercises-dataset@7455efae`](https://github.com/hasaneyldrm/exercises-dataset/tree/7455efae41b330c265e7cd4b78dfa848e7ce5ebd)，本地文件在 `assets/gym-visual/advanced/`；动作到素材 ID 的对应在 `advanced-content.js`。
+- 原有循环 GIF 来自固定版本 [`hasaneyldrm/exercises-dataset@7455efae`](https://github.com/hasaneyldrm/exercises-dataset/tree/7455efae41b330c265e7cd4b78dfa848e7ce5ebd)；本轮又从公开的 Gym Visual 风格动画视频生成 11 张匹配 GIF。本地文件均在 `assets/gym-visual/advanced/`，动作到文件的对应在 `advanced-content.js`。
 - 38 个动作的视频 BV 号、UP 主、时长和封面通过 B 站 `x/web-interface/view` 接口逐条核实，对应表在 `advanced-videos.js`。嵌入地址形式为 `https://player.bilibili.com/player.html?bvid=<BV号>&page=1`。
 - 视频优先核对 ALEX；完全对应的采用 ALEX，其余依次核对大志、凯圣王、谭成义及其他 UP 主。
 - 动作要点、常见错误、目标肌群与辅助肌群在 `advanced-content.js`；人体 SVG 母版未修改。
 
-## 近似 GIF 示意
+## 18 个近似动作的第二轮核对
 
-固定 1324 条数据中没有以下动作的完全对应 GIF。应用内已显示“示意”并在详情写明差异，教学视频与动作文字按实际动作匹配。它们不应被当作准确动作示范。
+Gym Visual 官方 GIF 目录现有约 6558 个条目，明显多于固定的 1324 条数据集。本轮逐项查找官方目录与 Lyfta 公开的 Gym Visual 动画视频，对 12 个动作制作了 180×180、10 fps、白底无字的本地循环 GIF；同一动作映射用于动作库、计划和训练界面。动作 ID、计划数据和人体 SVG 均未改变。
 
-| 动作 ID | 差异 |
-| --- | --- |
-| `single_arm_overhead_triceps` | GIF 与视频为双臂过顶，计划动作是单臂 |
-| `step_up` | GIF 持哑铃，计划动作可徒手 |
-| `tibialis_raise` | GIF 用史密斯机，计划动作可靠墙徒手 |
-| `low_box_jump` | GIF 为下箱稳定，计划动作是跳上箱 |
-| `lateral_step_down` | GIF 为登阶平衡，计划动作是侧向下阶 |
-| `band_hip_abduction` | GIF 为坐姿版本，视频为站姿版本 |
-| `single_leg_balance` | GIF 用平衡板，计划动作为地面站立 |
-| `lateral_lunge` | GIF 持杠铃，计划动作可徒手 |
-| `band_lateral_walk` | GIF 为坐姿髋外展，计划动作是侧向行走 |
-| `isometric_calf_raise` | GIF 为动态提踵，计划动作需静态保持 |
-| `band_dorsiflexion` | GIF 与计划的固定方式不同 |
-| `band_ankle_eversion` | GIF 为踝关节环绕，计划动作是抗阻外翻 |
-| `towel_toe_curl` | GIF 为踝关节环绕，计划动作是脚趾抓毛巾 |
-| `short_foot` | GIF 为踝关节环绕，计划动作是足弓主动收缩 |
-| `nordic_hamstring_eccentric` | GIF 为辅助式反向腿弯举，计划动作是北欧离心 |
-| `low_pogo_hops` | GIF 为半蹲跳，计划动作是低幅度弹跳 |
-| `fast_step_up` | GIF 为普通登阶，计划动作强调快速蹬伸 |
-| `swimming` | GIF 为陆上打腿，计划动作为水中游泳 |
+### 已改为匹配的动作（7）
 
-其中足踝、跳箱等动作的准确 Gym Visual 素材存在于更大的官方目录，但不在固定的 1324 条数据中；本次没有购买新素材。后续如取得对应 GIF，可按同一动作 ID 替换映射，不影响训练记录。
+| 动作 ID | 核对结果 | 动画来源 |
+| --- | --- | --- |
+| `step_up` | 徒手登阶，未持哑铃 | [Bodyweight Step-up on Stepbox](https://apilyfta.com/static/GymvisualMP4/45791201-Bodyweight-Step-up-on-Stepbox_Thighs_.mp4) |
+| `low_box_jump` | 双脚跳上低箱并站稳 | [Jump Box](https://apilyfta.com/static/GymvisualMP4/49651201-Jump-Box-(male)_Plyometrics_.mp4) |
+| `band_hip_abduction` | 站姿弹力带髋外展 | [Band Hip Abduction](https://apilyfta.com/static/GymvisualMP4/40311201-Band-hip-abduction-(male)_Hips.mp4) |
+| `single_leg_balance` | 地面单腿站立，无平衡板 | [Single Leg Stand](https://apilyfta.com/static/GymvisualMP4/37141201-Single-Leg-Stand_Plyometrics_.mp4) |
+| `lateral_lunge` | 徒手侧向弓步蹲 | [Side Lunge](https://apilyfta.com/static/GymvisualMP4/29721201-Side-Lunge_Thighs.mp4) |
+| `band_lateral_walk` | 弹力带侧向行走 | [Resistance Band Lateral Walk](https://apilyfta.com/static/GymvisualMP4/66071201-Resistance-Band-Lateral-Walk-(male)_Hips_.mp4) |
+| `nordic_hamstring_eccentric` | 固定脚踝、缓慢前降的北欧腘绳肌动作 | [Nordic Hamstring Curl](https://apilyfta.com/static/GymvisualMP4/77461201-Nordic-Hamstring-Curl-(male)_Thighs_.mp4) |
+
+### 画面明显改善，但仍保留“示意”提示（5）
+
+| 动作 ID | 新 GIF | 剩余差异 |
+| --- | --- | --- |
+| `single_arm_overhead_triceps` | [单臂过顶弹力带臂屈伸](https://apilyfta.com/static/GymvisualMP4/41401201-Band-Overhead-Single-Arm-Triceps-Extension_Upper-A.mp4) | 单臂动作准确，阻力是弹力带而非绳索；原教学视频仍为双臂版本 |
+| `lateral_step_down` | [侧向上下台阶](https://apilyfta.com/static/GymvisualMP4/51541201-Lateral-Step-Up_Thighs_.mp4) | 包含下阶阶段，但重点还包括上阶 |
+| `band_ankle_eversion` | [坐姿抗阻踝外翻](https://apilyfta.com/static/GymvisualMP4/67451201-Cable-Seated-Foot-Eversion-(female)_Calves_.mp4) | 踝外翻轨迹准确，阻力是绳索而非弹力带 |
+| `fast_step_up` | [徒手登阶动画加速 1.6 倍](https://apilyfta.com/static/GymvisualMP4/45791201-Bodyweight-Step-up-on-Stepbox_Thighs_.mp4) | 上、下台阶均加速，实际训练仍须稳定下阶 |
+| `isometric_calf_raise` | [徒手提踵动画加入踮起位置停留](https://apilyfta.com/static/GymvisualMP4/13731201-Bodyweight-Standing-Calf-Raise_Calves.mp4) | 画面未扶墙，实际训练需静止保持目标秒数 |
+
+### 仍未取得匹配且无字的动画（6）
+
+| 动作 ID | 现状 | 找到的官方候选 |
+| --- | --- | --- |
+| `tibialis_raise` | 现用史密斯机示意 | [靠墙徒手胫骨前肌训练 GIF](https://gymvisual.com/animated-gifs/23661-standing-tibialis-raise-wall-supported-male.html) |
+| `band_dorsiflexion` | 抗阻勾脚背动作接近，固定方式不同 | 未核实到更准确的官方 GIF |
+| `towel_toe_curl` | 现用踝环绕示意 | [站姿毛巾抓地 GIF](https://gymvisual.com/animated-gifs/25080-standing-towel-foot-crunch-male.html)，与计划的坐姿不同 |
+| `short_foot` | 现用踝环绕示意 | 未核实到短足训练官方 GIF |
+| `low_pogo_hops` | 现用半蹲跳示意 | [双脚 Pogo 弹跳 GIF](https://gymvisual.com/animated-gifs/24144-pogo-jump-2-foot-male.html) |
+| `swimming` | 现用陆上打腿示意 | 官方目录的 Swimming Crawl Style 仍是陆上动作，未见水中游泳版本 |
+
+官方候选页可以确认动作存在，但并不提供可直接接入的无字原始 GIF 文件；公开转存的版本有覆盖人物的水印。上述 7 个动作保留明确提示，避免把不匹配的画面当作准确教学。取得原始素材后只需替换对应 GIF 文件和映射，不会改变用户训练记录。
