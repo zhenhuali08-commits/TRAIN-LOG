@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.6.1';
+  const VERSION = '3.6.2';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -297,6 +297,7 @@
   ];
   const BASE_PLANS=JSON.parse(JSON.stringify(PLAN));
   const LIBRARY_PROGRAMS=JSON.parse(JSON.stringify(NEW_CONTENT.programs));
+  const PROGRAM_COVER_IDS=new Set(LIBRARY_PROGRAMS.map(p=>p.id));
   const PROGRAM_CATEGORIES=['基础训练','经典分化','专业力量','专项强化','减脂塑形','跑步专项力量','自定义'];
   PLAN.push(...LIBRARY_PROGRAMS);
   function mergeLibraryPlans(saved,settings={}){
@@ -585,6 +586,7 @@
   function legacyPlans(){return PLAN.filter(p=>BASE_PLAN_IDS.has(p.id));}
   function libraryPlans(){return PLAN.filter(p=>Array.isArray(p.days));}
   function programCategory(p){return p.category||LIBRARY_PROGRAMS.find(x=>x.id===p.id)?.category||'自定义';}
+  function programCover(p){return PROGRAM_COVER_IDS.has(p.id)?`<img class="program-cover" src="./assets/plan-covers/${p.id}.webp" alt="" loading="lazy" decoding="async">`:`<div class="plan-day">${p.days.length}</div>`;}
   function nextPlan(){const base=legacyPlans(),last=[...state.workouts].sort((a,b)=>new Date(b.endedAt)-new Date(a.endedAt)).find(w=>BASE_PLAN_IDS.has(w.planId));if(!last)return base[0];const idx=base.findIndex(p=>p.id===last.planId);return base[(idx+1)%base.length];}
   function totalVolume(w){ return round((w.exercises||[]).flatMap(e=>e.sets||[]).filter(s=>s.done&&!s.warmup).reduce((sum,s)=>sum+(Number(s.weight)||0)*(Number(s.reps)||0)+(s.drops||[]).reduce((a,d)=>a+(Number(d.weight)||0)*(Number(d.reps)||0),0),0),0); }
   function workingSets(w){ return (w.exercises||[]).flatMap(e=>e.sets||[]).filter(s=>s.done&&!s.warmup).length; }
@@ -791,7 +793,7 @@
       ${pageIntro('训练','训练计划和当天训练合在一起，按第 1 → 4 练循环，不绑定星期几。')}
       <div class="card current-plan"><div class="small muted">建议下一练</div><h2>${esc(next.name)}</h2><div class="small muted">${next.exercises.length} 个动作 · 第 ${next.index} 练</div><button class="primary-btn" style="margin-top:14px" data-start-plan="${next.id}">开始训练</button><button class="secondary-btn neutral free-training-btn" style="margin-top:9px;width:100%" id="free-workout-btn">＋ 自由训练</button></div>
       <section class="section"><div class="section-head"><div class="section-title">四练计划</div></div>${legacyPlans().map(p=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${p.index}</div><div class="plan-info"><strong>${esc(p.name)}</strong><small>${p.exercises.length} 个动作 · ${esc(p.note)}</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-plan="${p.id}">查看动作</button><button class="secondary-btn" data-start-plan="${p.id}">开始训练</button></div></div>`).join('')}</section>
-      <section class="section"><div class="section-head"><div class="section-title">计划库 · ${plans.length} 套</div><button class="section-link" id="create-program-btn">＋ 自定义计划</button></div><div class="filter-chips program-filters">${['全部',...PROGRAM_CATEGORIES].map(category=>{const count=category==='全部'?plans.length:plans.filter(p=>programCategory(p)===category).length;return `<button class="chip ${activeProgramCategory===category?'active':''}" data-program-category="${category}">${category} ${count}</button>`;}).join('')}</div><div class="program-list">${shownPlans.map(p=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${p.days.length}</div><div class="plan-info"><strong>${esc(p.name)}</strong><small>${esc(p.note||`${p.days.length} 练`)} · ${p.days.length} 个训练日</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-program="${esc(p.id)}">查看与编辑</button><button class="secondary-btn" data-start-program="${esc(p.id)}">选择训练日</button></div></div>`).join('')||'<div class="card empty">当前分类暂无计划，可创建自定义计划。</div>'}</div></section>
+      <section class="section"><div class="section-head"><div class="section-title">计划库 · ${plans.length} 套</div><button class="section-link" id="create-program-btn">＋ 自定义计划</button></div><div class="filter-chips program-filters">${['全部',...PROGRAM_CATEGORIES].map(category=>{const count=category==='全部'?plans.length:plans.filter(p=>programCategory(p)===category).length;return `<button class="chip ${activeProgramCategory===category?'active':''}" data-program-category="${category}">${category} ${count}</button>`;}).join('')}</div><div class="program-list">${shownPlans.map(p=>`<div class="card plan-card library-program-card"><div class="plan-top">${programCover(p)}<div class="plan-info"><strong>${esc(p.name)}</strong><small>${esc(p.note||`${p.days.length} 练`)} · ${p.days.length} 个训练日</small><span class="pill blue program-category">${esc(programCategory(p))}</span></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-program="${esc(p.id)}">查看与编辑</button><button class="secondary-btn" data-start-program="${esc(p.id)}">选择训练日</button></div></div>`).join('')||'<div class="card empty">当前分类暂无计划，可创建自定义计划。</div>'}</div></section>
       <section class="section"><div class="section-head"><div class="section-title">最近训练</div><button class="section-link" data-go="history">查看全部</button></div>${history.length?history.slice(0,3).map(historyItem).join(''):'<div class="card empty">还没有训练记录</div>'}</section>`;
     bindCommon();
     if(categoryScrollLeft!==undefined)main.querySelector('.program-filters').scrollLeft=categoryScrollLeft;
@@ -802,8 +804,9 @@
     document.getElementById('free-workout-btn').onclick=startFreeWorkout;
   }
 
-  function renderExercisesPage(chipScrollLeft){
-    main.innerHTML=`${pageIntro('动作','力量 + 有氧动作库；每个动作都可查看 3D 动图、视频讲解、动作要点、常见错误和训练肌群图。')}<div class="page-scroll-content">${exerciseLibraryHTML()}</div>`;
+  function renderExercisesPage(chipScrollLeft,searchQuery=''){
+    main.innerHTML=`${pageIntro('动作','力量 + 有氧动作库；每个动作都可查看 3D 动图、视频讲解、动作要点、常见错误和训练肌群图。',exerciseLibraryFiltersHTML())}<div class="page-scroll-content">${exerciseLibraryHTML(searchQuery)}</div>`;
+    main.querySelector('#exercise-search').value=searchQuery;
     if(chipScrollLeft!==undefined)main.querySelector('.filter-chips').scrollLeft=chipScrollLeft;
     bindExerciseLibrary();
   }
@@ -1066,14 +1069,17 @@
       <div class="note" style="margin-top:12px">按当前计划保持蛋白质约 150g/天。训练日碳水更高以支持训练表现；休息日适度降低碳水。份量以你的总热量目标为准，可按体重、腰围和训练表现每两周调整。</div>`;
   }
 
-  function exerciseLibraryHTML(){
-    const groups=EXERCISE_GROUPS;
-    const list=allExercises().filter(e=>activeExerciseFilter==='全部'||e.group===activeExerciseFilter);
-    return `<div class="search"><input id="exercise-search" placeholder="搜索动作名称"></div><div class="filter-chips">${groups.map(g=>`<button class="chip ${activeExerciseFilter===g?'active':''}" data-filter="${g}">${g}</button>`).join('')}</div><div class="section"><div id="exercise-list" class="list">${list.map(exerciseListItem).join('')}</div></div>`;
+  function exerciseLibraryFiltersHTML(){
+    return `<div class="exercise-sticky-controls"><div class="search"><input id="exercise-search" placeholder="搜索动作名称" aria-label="搜索动作名称"></div><div class="filter-chips">${EXERCISE_GROUPS.map(g=>`<button class="chip ${activeExerciseFilter===g?'active':''}" data-filter="${g}">${g}</button>`).join('')}</div></div>`;
+  }
+  function exerciseLibraryHTML(searchQuery=''){
+    const q=searchQuery.trim().toLowerCase();
+    const list=allExercises().filter(e=>(activeExerciseFilter==='全部'||e.group===activeExerciseFilter)&&e.name.toLowerCase().includes(q));
+    return `<div class="section"><div id="exercise-list" class="list">${list.map(exerciseListItem).join('')||'<div class="empty">没有找到这个动作</div>'}</div></div>`;
   }
   function exerciseListItem(e){ return `<button class="list-item tutorial-card" style="width:100%;text-align:left" data-tutorial="${e.id}"><div class="muscle-icon visual">${exerciseVisual(e)}</div><div class="grow"><strong>${esc(e.name)}</strong><p>${esc(e.primary)} · ${esc(e.equipment)}${e.type==='cardio'?' · min':''}</p></div><span class="pill blue">讲解</span></button>`; }
   function bindExerciseLibrary(){
-    document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const chipScrollLeft=b.parentElement.scrollLeft;activeExerciseFilter=b.dataset.filter;renderExercisesPage(chipScrollLeft);});
+    document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const chipScrollLeft=b.parentElement.scrollLeft;const searchQuery=document.getElementById('exercise-search')?.value||'';activeExerciseFilter=b.dataset.filter;renderExercisesPage(chipScrollLeft,searchQuery);});
     document.querySelectorAll('[data-tutorial]').forEach(b=>b.onclick=()=>showTutorial(b.dataset.tutorial));
     const list=document.getElementById('exercise-list');hydrateGymVisuals(list);
     const s=document.getElementById('exercise-search'); if(s)s.oninput=()=>{ const q=s.value.trim().toLowerCase(); list.innerHTML=allExercises().filter(e=>(activeExerciseFilter==='全部'||e.group===activeExerciseFilter)&&e.name.toLowerCase().includes(q)).map(exerciseListItem).join('')||'<div class="empty">没有找到这个动作</div>'; document.querySelectorAll('[data-tutorial]').forEach(b=>b.onclick=()=>showTutorial(b.dataset.tutorial)); hydrateGymVisuals(list); };
@@ -1547,7 +1553,7 @@
   document.getElementById('modal-close').onclick=closeModal;
   modal.addEventListener('click',e=>{ if(e.target===modal)closeModal(); });
 
-  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.6.1').catch(()=>{}));
+  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.6.2').catch(()=>{}));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&page==='home')renderHome();});
   scheduleDateRefresh();
   render();
