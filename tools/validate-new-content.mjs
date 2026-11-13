@@ -1,10 +1,12 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
+import crypto from 'node:crypto';
 
 const context=vm.createContext({window:{}});
 for(const file of ['new-videos.js','new-content.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
 const {TRAIN_LOG_NEW_CONTENT:content,TRAIN_LOG_NEW_NAMES:names,TRAIN_LOG_NEW_VIDEOS:videos,TRAIN_LOG_NEW_GIFS:gifs}=context.window;
 const localMedia=JSON.parse(fs.readFileSync('assets/gym-visual/manifest.json','utf8'));
+const pinnedMedia=JSON.parse(fs.readFileSync('assets/gym-visual/pinned-mirrors.json','utf8'));
 const oldSource=fs.readFileSync('app.js','utf8').split('// V2.5 全动作实用讲解')[0];
 const oldIds=[...new Set([...oldSource.matchAll(/\{id:'([^']+)'/g)].map(m=>m[1]))];
 const oldLive=new Set(oldIds.filter(id=>!new Set(['hip_thrust','cable_kickback','ab_wheel','rowing_machine','jump_rope','swimming']).has(id)));
@@ -25,7 +27,13 @@ for(const ex of content.exercises){
   check(ex.muscleMap.primary.length>0,`${ex.id} 缺少主训练肌群`);
   const path=gifs[ex.id];
   check(Boolean(path),`${ex.id} 缺少 GIF`);
-  if(ex.gymId)check(path?.startsWith(`videos/${ex.gymId}-`),`${ex.id} 的固定数据集 GIF ID 不一致`);
+  if(ex.gymId){
+    const mirror=pinnedMedia.files[ex.id];
+    check(path===`assets/gym-visual/${ex.id}.gif`,`${ex.id} 的本地 GIF 路径不一致`);
+    check(mirror?.original?.startsWith(`videos/${ex.gymId}-`),`${ex.id} 的固定数据集 GIF ID 不一致`);
+    if(path&&fs.existsSync(path))check(crypto.createHash('sha256').update(fs.readFileSync(path)).digest('hex')===mirror?.sha256,`${ex.id} 的 GIF 与固定来源校验不一致`);
+    else check(false,`${ex.id} 的 GIF 文件不存在`);
+  }
   else{
     check(path===`assets/gym-visual/${ex.id}.gif`,`${ex.id} 的本地 GIF 路径不一致`);
     check(Boolean(localMedia.clips[ex.id]),`${ex.id} 缺少 Gym Visual 目录来源 ID`);
@@ -33,6 +41,7 @@ for(const ex of content.exercises){
   }
 }
 check(Object.keys(localMedia.clips).length===35,'本地 GIF 应为 35 个');
+check(Object.keys(pinnedMedia.files).length===28,'固定数据集镜像 GIF 应为 28 个');
 check(Object.keys(localMedia.approximate).length===6,'近似动作应为 6 个本地 GIF');
 for(const [id,video] of Object.entries(videos)){
   check(known.has(id),`${id} 视频没有对应动作`);
@@ -50,9 +59,9 @@ if(process.argv[2]){
   const dataset=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
   const byPath=new Map(dataset.map(row=>[row.gif_url,row]));
   check(dataset.length===1324,`固定数据集数量 ${dataset.length}，应为 1324`);
-  for(const [id,path] of Object.entries(gifs).filter(([,path])=>path.startsWith('videos/'))){
-    const row=byPath.get(path);
-    check(Boolean(row),`${id} 的 GIF 不在固定数据集中：${path}`);
+  for(const [id,mirror] of Object.entries(pinnedMedia.files)){
+    const row=byPath.get(mirror.original);
+    check(Boolean(row),`${id} 的 GIF 不在固定数据集中：${mirror.original}`);
     check(row?.attribution?.includes('Gym visual'),`${id} 缺少 Gym visual 来源标识`);
   }
   if(process.argv.includes('--audit')){
@@ -61,7 +70,7 @@ if(process.argv[2]){
       '',
       `固定数据集：\`hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd\`，共 ${dataset.length} 条。`,
       '',
-      `新增动作 ${ids.length} 个；Gym Visual 循环 GIF ${Object.keys(gifs).length} 个（固定数据集 28 个、本地转换 35 个）；其中 7 个为动作基本对应的近似素材；B 站视频 ${Object.keys(videos).length} 个。`,
+      `新增动作 ${ids.length} 个；Gym Visual 循环 GIF ${Object.keys(gifs).length} 个（固定数据集镜像 28 个、本地转换 35 个）；其中 7 个为动作基本对应的近似素材；B 站视频 ${Object.keys(videos).length} 个。`,
       '',
       '同一动作 ID 在动作库、计划编辑、训练中和历史记录使用同一 GIF 映射。近似素材与动作说明的差异见 GYM_VISUAL_CATALOG_AUDIT.md。',
       '',
@@ -71,8 +80,8 @@ if(process.argv[2]){
       '| --- | --- | --- | --- | --- | --- | --- |'
     ];
     for(const ex of content.exercises){
-      const path=gifs[ex.id],row=byPath.get(path),video=videos[ex.id];
-      const gifText=row?`#${row.id} ${row.name} · ${path}${ex.id==='pause_back_squat'?'（近似：无底部停顿）':''}`:`#${localMedia.clips[ex.id]} Gym Visual · ${path}${localMedia.approximate[ex.id]?'（近似）':''}`;
+      const path=gifs[ex.id],row=byPath.get(pinnedMedia.files[ex.id]?.original),video=videos[ex.id];
+      const gifText=row?`#${row.id} ${row.name} · ${path}（原始路径 ${pinnedMedia.files[ex.id].original}）${ex.id==='pause_back_squat'?'（近似：无底部停顿）':''}`:`#${localMedia.clips[ex.id]} Gym Visual · ${path}${localMedia.approximate[ex.id]?'（近似）':''}`;
       const duration=video?`${Math.floor(video.duration/60)}:${String(video.duration%60).padStart(2,'0')}`:'—';
       const embed=video?`https://player.bilibili.com/player.html?bvid=${video.bvid}&page=${video.page||1}&autoplay=1&danmaku=0&high_quality=1`:'—';
       lines.push(`| \`${ex.id}\` | ${ex.name} | ${gifText} | ${video?.author||'—'} | ${video?.bvid||'—'} | ${duration} | ${embed} |`);

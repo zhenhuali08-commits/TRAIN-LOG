@@ -1,0 +1,117 @@
+{
+  "source": "hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd",
+  "files": {
+    "weighted_pullup": {
+      "original": "videos/0841-HMzLjXx.gif",
+      "sha256": "945665a6a86ce3fbd2cdc47fe0935aada3e7bdc9e02e2de064e49da6f0c56abd"
+    },
+    "reverse_grip_cable_pulldown": {
+      "original": "videos/0245-xBYcQHj.gif",
+      "sha256": "1568643b8b26c31261e54114a7cb0cc199a5923d90c00689fe04b44881b9829b"
+    },
+    "reverse_grip_cable_triceps_pushdown": {
+      "original": "videos/0207-VjYliFZ.gif",
+      "sha256": "ed9db8d2c370ebe41fa3499068a8fa7f78336f1577efa6978ec279a0e949fa8f"
+    },
+    "dead_bug": {
+      "original": "videos/0276-iny3m5y.gif",
+      "sha256": "c3dde2bfa860d8a141861ee94259e9fafee2096c74cb0553c87a05bae9544b21"
+    },
+    "cable_shoulder_external_rotation": {
+      "original": "videos/0235-FWdVhcW.gif",
+      "sha256": "abb329c029bd96777f55b4d9b8437da40467a505a461c2ff9764954a7b0987bb"
+    },
+    "machine_hanging_leg_raise": {
+      "original": "videos/2963-weoDEpH.gif",
+      "sha256": "c0a434fae1fa8541d54c2a56754cb9ebc31a10dad2ee428f71a48b36589c7bfe"
+    },
+    "seated_db_lateral_raise": {
+      "original": "videos/0396-hxyTtWj.gif",
+      "sha256": "25a4eacb20439a93fef6a70ef6b5e0b9b0a8757a9d7fc98bccdb0474caa46638"
+    },
+    "kneeling_ab_rollout": {
+      "original": "videos/0857-NAgVB3t.gif",
+      "sha256": "e12b3649a3e5a1d09cc0fe78607c6670997f58af47aa3adfeb76350760f9a310"
+    },
+    "glute_bridge": {
+      "original": "videos/3013-u0cNiij.gif",
+      "sha256": "0488f6ef2f876420c071a2d4243f1f1574d25bba5b5eb72246da4f130d58ad91"
+    },
+    "single_leg_glute_bridge": {
+      "original": "videos/3645-rmEukuS.gif",
+      "sha256": "f741109cd533121697b6758c350d2d376c62051370f32e392cfebd313d05cb63"
+    },
+    "chest_supported_row": {
+      "original": "videos/0327-7vG5o25.gif",
+      "sha256": "086a832915dafd960893376e299a2bf852f89f7081a97b23dc20155a88f7c272"
+    },
+    "seated_calf_raise": {
+      "original": "videos/0594-bOOdeyc.gif",
+      "sha256": "8f3b487983e6e7fc1431bd1d341556d4f25e693101f69eb46dc6a2cd0c65c2ba"
+    },
+    "machine_hip_abduction": {
+      "original": "videos/0597-CHpahtl.gif",
+      "sha256": "f736cf937b8224e209c00d23acf002c74e6a0c94bea1bd7d321650d3a54f0cf5"
+    },
+    "barbell_front_squat": {
+      "original": "videos/0042-zG0zs85.gif",
+      "sha256": "970b67b761f0bcb2a3f20dde7f09d6e8fe4256ff1f6d8f036f698ff31d1d686c"
+    },
+    "weighted_plank": {
+      "original": "videos/2135-VBAWRPG.gif",
+      "sha256": "d3f13ae3b63e1de87c092410092e9e582619d451d5c6c69f2db635c2067d7123"
+    },
+    "cable_lateral_raise": {
+      "original": "videos/0178-goJ6ezq.gif",
+      "sha256": "6c957260f7ecd64d52369fb5e0d6e0ef1b5081469ba8518dd8f1f25acaf16cfa"
+    },
+    "single_arm_lat_pulldown": {
+      "original": "videos/3563-U5INZY6.gif",
+      "sha256": "e12a2699a3538586d9f10913188600378565f1df46ce9b92f66aa677049ac054"
+    },
+    "standard_pushup": {
+      "original": "videos/0662-I4hDWkc.gif",
+      "sha256": "22d3df1d1d7dea5edd61907e431ef6a5c4bf4bd1b6d290981a437576c3833464"
+    },
+    "knee_pushup": {
+      "original": "videos/3211-ZOuKWir.gif",
+      "sha256": "785e06f5323ebb70353e406c3db670e693fbf0364d947f50c1d435d716f13d4d"
+    },
+    "incline_pushup": {
+      "original": "videos/0493-B1EVP9F.gif",
+      "sha256": "b461ed0cfcae9dc9e25b2e82824f80f66cc450d33abb3be36b15d029290cc754"
+    },
+    "mountain_climber": {
+      "original": "videos/0630-RJgzwny.gif",
+      "sha256": "99f2367ac41ca7c88b391cfffb02951a74093d16a13c8eacbe399153f111cf7f"
+    },
+    "side_plank": {
+      "original": "videos/0705-RKjH6Lt.gif",
+      "sha256": "ae63977258a9b9825242ff2536fb9ecc8f14abdd8dc06b87f7d30f382b26e0f5"
+    },
+    "inchworm": {
+      "original": "videos/3698-TV87DNB.gif",
+      "sha256": "6fcb767480e8bfbf741efeb3383d3de8617de72f25c54d9ad8bc2305dac946c2"
+    },
+    "wall_calf_stretch": {
+      "original": "videos/1377-m0tCHqc.gif",
+      "sha256": "01446ed48b032bc85b69200151be5560970748ee627626d17d658ba4ffde2116"
+    },
+    "supine_hamstring_stretch": {
+      "original": "videos/1576-sU5BrfP.gif",
+      "sha256": "803bad1c46a93ca8804fb19f3bfbb494f5c755941345793a6caa2e97ec1b01a0"
+    },
+    "butterfly_groin_stretch": {
+      "original": "videos/1494-bWlZvXh.gif",
+      "sha256": "33a3cd7656316549e7ca64253e719ef3ebaab5d132ccf41b7f3d5877c4be2a99"
+    },
+    "overhead_triceps_stretch": {
+      "original": "videos/0643-Z5YStHW.gif",
+      "sha256": "bf2c32f5ad8b3b9cccb69164f07a16cc8a3660b87823ff5e8272e4bbe75210b0"
+    },
+    "pause_back_squat": {
+      "original": "videos/0043-qXTaZnJ.gif",
+      "sha256": "3c1e29f67ffaae89316c94d7af42fcbe2cbf379967c27c1d30fa0205b6f9ed30"
+    }
+  }
+}

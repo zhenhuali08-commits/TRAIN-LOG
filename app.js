@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.5.1';
+  const VERSION = '3.5.2';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -1201,9 +1201,8 @@
 
   function exerciseVisual(ex,{priority=false}={}){
     const path=GYM_DIRECT[ex.id]||(NEW_EXERCISE_IDS.has(ex.id)?'':persistedGymMap[ex.id])||'';
-    const src=path?(path.startsWith('assets/gym-visual/')?`./${path}`:`${GYM_BASE}/${String(path).replace(/^\.\//,'')}`):'';
     if(NEW_EXERCISE_IDS.has(ex.id)&&!path)return `<div class="gym-media-shell gym-media-pending"><span class="gym-loading">动图待补充</span></div>`;
-    return `<div class="gym-media-shell${priority?' priority':''}"><img class="gym-gif" data-gym-id="${ex.id}" data-gym-path="${esc(path)}" data-gym-priority="${priority?'1':'0'}" ${src?`src="${src}"`:''} alt="${esc(ex.name)}" loading="${priority?'eager':'lazy'}" decoding="async" ${priority?'fetchpriority="high"':''} draggable="false"><span class="gym-loading">动作加载中</span></div>`;
+    return `<div class="gym-media-shell${priority?' priority':''}"><img class="gym-gif" data-gym-id="${ex.id}" data-gym-path="${esc(path)}" data-gym-priority="${priority?'1':'0'}" alt="${esc(ex.name)}" loading="${priority?'eager':'lazy'}" decoding="async" ${priority?'fetchpriority="high"':''} draggable="false"><span class="gym-loading">动作加载中</span></div>`;
   }
   async function loadGymIndex(force=false){if(force)gymIndexPromise=null;if(!gymIndexPromise)gymIndexPromise=fetch(GYM_DATA_URL,{cache:'force-cache'}).then(r=>r.ok?r.json():Promise.reject()).catch(()=>[]);return gymIndexPromise;}
   function norm(s=''){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
@@ -1223,14 +1222,14 @@
   async function gymRecord(ex){const saved=GYM_DIRECT[ex.id]||(NEW_EXERCISE_IDS.has(ex.id)?'':persistedGymMap[ex.id]);if(saved)return {gif_url:saved};if(NEW_EXERCISE_IDS.has(ex.id))return null;if(gymCache[ex.id])return gymCache[ex.id];try{const list=await loadGymIndex(),q=norm(GYM_QUERY[ex.id]||({胸:'barbell bench press',背:'cable lat pulldown',肩:'dumbbell lateral raise',腿:'barbell full squat',二头:'dumbbell biceps curl',三头:'cable pushdown',腹:'3/4 sit-up',小腿:'standing calf raise',有氧:'walk elliptical cross trainer'}[ex.group]||''));if(q){const rec=pickGymRecord(list,ex,q);if(rec?.gif_url){persistedGymMap[ex.id]=rec.gif_url;saveGymMap();gymCache[ex.id]=rec;return rec;}}}catch(err){console.warn('Gym Visual index load failed',err);}const fallback=GYM_GROUP_FALLBACK[ex.group]||GYM_GROUP_FALLBACK.肩;return {gif_url:fallback,fallback:true};}
   function attachGymSources(img,path){
     const rel=String(path||'').replace(/^\.\//,'');if(!rel)return;
-    const sources=rel.startsWith('assets/gym-visual/')?[`./${rel}`]:[`${GYM_BASE}/${rel}`,`https://cdn.statically.io/gh/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`,`https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`];
+    const sources=rel.startsWith('assets/gym-visual/')?[`./${rel}`,`./${rel}?retry=1`]:[`${GYM_BASE}/${rel}`,`https://cdn.statically.io/gh/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`,`https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`];
     let i=0;const shell=img.closest('.gym-media-shell');
     img.dataset.activePath=rel;img.classList.remove('no-media');shell?.classList.remove('failed');
     img.onload=()=>{if(img.dataset.activePath===rel)shell?.classList.add('loaded');};
     img.onerror=()=>{if(img.dataset.activePath!==rel)return;i++;if(i<sources.length)setTimeout(()=>{if(img.dataset.activePath===rel)img.src=sources[i];},180*i);else{img.classList.add('no-media');shell?.classList.add('failed');}};
     const current=img.getAttribute('src')||'';
-    if(current&&current.includes(rel)){if(img.complete&&img.naturalWidth)shell?.classList.add('loaded');return;}
-    img.src=sources[0];
+    if(current&&current.includes(rel)){if(img.complete&&img.naturalWidth){shell?.classList.add('loaded');return;}if(!img.complete)return;img.removeAttribute('src');i=1;}
+    img.src=sources[Math.min(i,sources.length-1)];
   }
   function suspendGymImage(img){
     if(img._gymSuspendTimer){clearTimeout(img._gymSuspendTimer);img._gymSuspendTimer=null;}
@@ -1242,7 +1241,7 @@
     gymVisibilityObserver=new IntersectionObserver(entries=>entries.forEach(({target:img,isIntersecting})=>{
       img.dataset.gymVisible=isIntersecting?'1':'0';
       if(isIntersecting){if(img._gymSuspendTimer)clearTimeout(img._gymSuspendTimer);img._gymSuspendTimer=null;const path=img.dataset.gymPath;if(path&&!img.getAttribute('src'))attachGymSources(img,path);}
-      else if(img._gymSuspendTimer){clearTimeout(img._gymSuspendTimer);img._gymSuspendTimer=null;}
+      else if(img.getAttribute('src')&&!img._gymSuspendTimer)img._gymSuspendTimer=setTimeout(()=>{img._gymSuspendTimer=null;if(img.dataset.gymVisible==='0')suspendGymImage(img);},800);
     }),{root:null,rootMargin:'180px 0px',threshold:.01});
     return gymVisibilityObserver;
   }
@@ -1527,7 +1526,7 @@
   document.getElementById('modal-close').onclick=closeModal;
   modal.addEventListener('click',e=>{ if(e.target===modal)closeModal(); });
 
-  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.5.1').catch(()=>{}));
+  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.5.2').catch(()=>{}));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&page==='home')renderHome();});
   scheduleDateRefresh();
   render();
