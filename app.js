@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.7.0';
+  const VERSION = '3.7.1';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -463,7 +463,7 @@
   function uid(){ return (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`); }
   function today(){ return new Date().toISOString().slice(0,10); }
   function esc(v=''){ return String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
-  function applyTheme(){document.documentElement.dataset.theme=THEMES.some(([id])=>id===state.settings?.theme)?state.settings.theme:'classic';}
+  function applyTheme(){const theme=THEMES.some(([id])=>id===state.settings?.theme)?state.settings.theme:'classic';document.documentElement.dataset.theme=theme;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',({classic:'#e8f3ff',teal:'#e9f8f5',purple:'#f3effb',coral:'#fff2eb'})[theme]);}
   function themeSettingsHTML(){return `<section class="section"><div class="card"><div class="section-title">主题颜色</div><div class="theme-grid">${THEMES.map(([id,label,color])=>`<button class="theme-choice ${state.settings.theme===id?'active':''}" data-theme-option="${id}" aria-pressed="${state.settings.theme===id}"><i style="--swatch:${color}"></i><span>${label}</span></button>`).join('')}</div></div></section>`;}
   function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
   function num(v){ const n=parseFloat(v); return Number.isFinite(n)?n:null; }
@@ -767,7 +767,7 @@
 
       <section class="section">
         <div class="section-head"><div class="section-title">本周</div><button class="section-link" data-go="history">训练记录</button></div>
-        <div class="card">
+        <div class="card weekly-card">
           <div class="stat-row"><span>力量训练</span><strong>${week.length} / 4</strong></div>
           <div class="progress-bar"><i style="width:${clamp(week.length/4*100,0,100)}%"></i></div>
           <div class="stat-row"><span>完成有效组</span><strong>${week.reduce((s,w)=>s+workingSets(w),0)} 组</strong></div>
@@ -777,7 +777,7 @@
 
       <section class="section">
         <div class="section-head"><div class="section-title">肌群恢复</div><button class="section-link" id="wellness-btn">更新今日状态</button></div>
-        <div class="card">${Object.entries(muscles).map(([g,v])=>`<div class="muscle-row"><span>${g}</span><div class="progress-bar"><i style="width:${v}%"></i></div><strong>${v}%</strong></div>`).join('')}</div>
+        <div class="card muscle-card">${Object.entries(muscles).map(([g,v])=>`<div class="muscle-row"><span>${g}</span><div class="progress-bar"><i style="width:${v}%"></i></div><strong>${v}%</strong></div>`).join('')}</div>
       </section>
     `;
     bindCommon();
@@ -1555,7 +1555,7 @@
   document.getElementById('modal-close').onclick=closeModal;
   modal.addEventListener('click',e=>{ if(e.target===modal)closeModal(); });
 
-  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.7.0').catch(()=>{}));
+  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.7.1').catch(()=>{}));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&page==='home')renderHome();});
   scheduleDateRefresh();
   render();

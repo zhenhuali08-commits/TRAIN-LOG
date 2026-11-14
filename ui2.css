@@ -190,3 +190,61 @@ button:active{filter:brightness(.96)}
 @media(prefers-reduced-motion:no-preference){
   .primary-btn,.secondary-btn,.chip,.tab,.nav-item,.theme-choice,.backup-action{transition:background-color .18s,color .18s,border-color .18s,box-shadow .18s,filter .18s}
 }
+
+/* UI 2.0 detail pass: one continuous canvas, illustrated card edges and readable dark data. */
+:root{--ui2-wave:color-mix(in srgb,var(--theme-primary-border) 72%,white);--ui2-wave-bright:color-mix(in srgb,var(--theme-primary-bright) 20%,white);--ui2-sweep:color-mix(in srgb,var(--theme-primary) 19%,var(--theme-canvas-tint-2));--ui2-canvas-mid:color-mix(in srgb,var(--theme-canvas-tint) 43%,#f1f3f6);--ui2-canvas-low:color-mix(in srgb,var(--theme-canvas-tint) 15%,#f1f3f6)}
+html,body{background:var(--theme-canvas-tint-2)}
+body{background:
+  radial-gradient(ellipse 95% 340px at 104% 90px,var(--theme-canvas-tint) 0%,transparent 76%),
+  linear-gradient(180deg,var(--theme-canvas-tint-2) 0%,var(--ui2-canvas-mid) 440px,var(--ui2-canvas-low) 980px,#f1f3f6 1600px)}
+.app-shell::before{display:none}
+.topbar,.page-intro{position:sticky;background:rgba(235,244,255,.43);border:0;box-shadow:none;backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
+.topbar{z-index:20}.page-intro{z-index:18}
+.topbar,.page-intro{background-image:radial-gradient(ellipse 320px 300px at calc(50% + 285px) 190px,var(--ui2-sweep) 0%,var(--theme-canvas-tint) 99.5%,transparent 100%),linear-gradient(180deg,var(--theme-canvas-tint-2) 0%,var(--ui2-canvas-mid) 440px,#f1f3f6 100%);background-attachment:fixed;backdrop-filter:none;-webkit-backdrop-filter:none}
+.main-content{position:relative;z-index:1}
+.topbar>div:first-child{padding-left:47px}
+.topbar>div:first-child::before,.topbar>div:first-child::after{height:30px;width:15px;top:4px;border-radius:2px;background:linear-gradient(180deg,var(--theme-primary),var(--theme-primary-bright))}
+.topbar>div:first-child::after{left:27px}
+.page-intro .page-title{font-size:32px}
+.page-intro-copy::after{width:29px;height:4px}
+.card,.list-item,.training-exercise{border-color:rgba(255,255,255,.74);box-shadow:0 11px 28px rgba(41,73,119,.09)}
+.next-card,.metric-card,.plan-card,.tutorial-card,.list-item[data-history],.weekly-card,.muscle-card{
+  background:radial-gradient(ellipse 85% 115% at 112% 145%,var(--ui2-wave-bright) 0%,var(--ui2-wave) 64%,transparent 65%),#fff;
+  overflow:hidden}
+.next-card{min-height:82px}
+.next-card .arrow{color:#68788e;font-size:29px;line-height:1}
+.next-index,.plan-day{background:linear-gradient(150deg,#eef6ff 0%,var(--theme-primary-border) 100%);box-shadow:inset 0 -1px 0 var(--theme-primary-border),0 4px 9px rgba(26,109,218,.07)}
+.metric-card::before{content:"";position:absolute;top:17px;left:18px;width:25px;height:25px;border-radius:8px;background:var(--theme-primary-soft);box-shadow:inset 0 0 0 1px var(--theme-primary-border)}
+.metric-card::after{content:"%";position:absolute;top:19px;left:23px;color:var(--theme-primary);font-size:16px;font-weight:800;line-height:21px}
+.metric-card:first-child::after{content:"";top:23px;left:23px;width:15px;height:12px;border:2px solid var(--theme-primary);border-radius:5px 5px 3px 3px;box-sizing:border-box}
+.metric-card small{padding-left:34px}
+.metric-card strong{letter-spacing:-.04em}
+.primary-btn{position:relative;overflow:hidden;background:linear-gradient(105deg,var(--theme-gradient-start) 0%,var(--theme-primary) 55%,var(--theme-gradient-end) 100%);box-shadow:0 8px 18px var(--theme-focus-ring)}
+.primary-btn[data-start-plan],.current-plan .primary-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px}
+.primary-btn[data-start-plan]::before,.current-plan .primary-btn::before{content:"";display:inline-block;width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-left:13px solid #fff;filter:drop-shadow(0 1px 1px rgba(0,0,0,.12))}
+.section-link[data-go]::after{content:"";width:7px;height:7px;border-top:2px solid currentColor;border-right:2px solid currentColor;transform:rotate(45deg);margin-left:8px}
+.hero-card,.current-plan,.workout-head{background:radial-gradient(ellipse 90% 88% at 115% -6%,rgba(34,121,239,.5) 0%,transparent 70%),linear-gradient(125deg,var(--theme-dark-start),var(--theme-dark-end));box-shadow:0 17px 34px rgba(12,43,89,.2)}
+.hero-card::after,.current-plan::after,.workout-head::after{width:270px;height:175px;right:-95px;bottom:-112px;border-radius:50%;opacity:1;transform:rotate(-24deg);background:linear-gradient(135deg,var(--theme-primary-strong),var(--theme-primary),var(--theme-primary-bright));box-shadow:0 0 2px 1px rgba(133,219,255,.7)}
+.hero-card::before,.current-plan::before,.workout-head::before{content:"";position:absolute;z-index:1;width:290px;height:175px;right:-118px;bottom:-132px;border-radius:50%;transform:rotate(-24deg);border:2px solid rgba(133,219,255,.6);box-shadow:0 -5px 16px var(--theme-focus-ring);pointer-events:none}
+.ring{box-shadow:0 0 22px rgba(39,215,209,.17)}
+.ring::after{background:#09274a}
+.progress-bar i{border-radius:99px;box-shadow:0 1px 3px var(--theme-focus-ring)}
+.tutorial-card .muscle-icon.visual{background:linear-gradient(145deg,#f3f7ff,#eaf2ff)}
+.tutorial-card .muscle-icon.visual img{object-fit:contain}
+.tutorial-card .muscle-icon.visual .gym-gif{transform:scale(1.18)}
+.tabs,.report-tabs{background:rgba(206,222,247,.52)}
+.tab.active,.report-tabs button.active{color:var(--theme-primary-text)}
+.bottom-nav{background:rgba(249,251,255,.97);box-shadow:0 -7px 24px rgba(36,72,128,.075)}
+.nav-item.active[data-page="home"] svg,.nav-item.active[data-page="mine"] svg{fill:var(--theme-primary-soft)}
+.nav-item.active[data-page="training"] svg circle:last-child{fill:var(--theme-primary)}
+.nav-item.active[data-page="exercises"] svg rect{fill:var(--theme-primary-soft)}
+#mine-content>.grid2 .metric-card,#mine-content .chart{background:radial-gradient(ellipse 90% 58% at 102% 124%,var(--theme-primary) 0%,var(--theme-primary-strong) 50%,transparent 51%),linear-gradient(125deg,var(--theme-dark-start),var(--theme-dark-end));border:1px solid rgba(109,187,255,.35);color:#fff;box-shadow:0 14px 28px rgba(11,43,91,.17)}
+#mine-content>.grid2 .metric-card small,#mine-content>.grid2 .metric-card strong{color:#fff}
+#mine-content>.grid2 .metric-card .metric-delta.muted{color:#d0dfef}
+#mine-content .chart{height:200px;padding:13px}
+#mine-content .card:has(> .chart){padding:0;background:transparent;border:0;box-shadow:none}
+#mine-content .chart svg text{fill:#d8e7fa}
+#mine-content .chart svg line{stroke:rgba(196,218,244,.3)}
+#mine-content .chart svg circle{fill:#fff;stroke:var(--theme-primary-bright)}
+#mine-content .chart-empty{color:#e1eafa}
+@media(max-width:390px){.metric-card::before{top:14px;left:14px}.metric-card::after{top:16px;left:19px}.metric-card:first-child::after{top:20px;left:19px}.metric-card small{padding-left:32px}}
