@@ -2,11 +2,11 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.6.2';
+  const VERSION = '3.7.0';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
-  const THEMES=[['classic','经典蓝','#1677ff'],['teal','青绿','#007f79'],['purple','紫色','#6e4ac5'],['coral','珊瑚橙','#bb552f']];
+  const THEMES=[['classic','经典蓝','#0B72FE'],['teal','青绿','#018A8D'],['purple','紫色','#7149C2'],['coral','珊瑚橙','#D2653F']];
 
   const EXERCISES = [
     {id:'bench_press',name:'杠铃卧推',group:'胸',equipment:'杠铃',muscles:['胸','三头','肩'],primary:'胸大肌',secondary:'肱三头肌、三角肌前束',tips:['肩胛骨向后下方收紧并稳定贴住凳面','双脚踩稳地面，保持躯干稳定','杠铃下降至胸部附近后平稳推起，不要弹胸'],mistakes:['肩膀前顶、肩胛失去稳定','手腕过度后折','为了重量牺牲下放控制'],rest:'2–3 分钟'},
@@ -490,6 +490,7 @@
     next.workouts=(Array.isArray(next.workouts)?next.workouts:[]).map(x=>({...x,id:x.id||uid()}));
     next.customExercises=(Array.isArray(next.customExercises)?next.customExercises:[]).map(x=>({...x,id:x.id||`custom_${uid()}`}));
     next.settings={...base.settings,...(next.settings||{})};
+    if(!THEMES.some(([id])=>id===next.settings.theme))next.settings.theme='classic';
     next.wellness={...base.wellness,...(next.wellness||{})};
     next.meta={...base.meta,...(next.meta||{}),storage:'indexeddb'};
     next.plans=mergeLibraryPlans(next.plans,next.settings).map((x,i)=>({...x,id:x.id||`plan_${i+1}`}));
@@ -599,7 +600,7 @@
     const values=pts.map(p=>Number(p.weight)),min=Math.min(...values)-.5,max=Math.max(...values)+.5,w=320,h=150,pad=20,span=Math.max(1,max-min);
     const xy=pts.map((p,i)=>[pad+i*(w-2*pad)/(pts.length-1),h-pad-(Number(p.weight)-min)/span*(h-2*pad)]);
     const path=xy.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
-    return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="体重趋势"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#e7e9ee"/><path d="${path}" fill="none" stroke="var(--blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${xy.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fff" stroke="var(--blue)" stroke-width="2"/><text x="${p[0]}" y="${p[1]-8}" text-anchor="middle" font-size="8" fill="#707681">${values[i]}</text>`).join('')}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="体重趋势"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#e7e9ee"/><path d="${path}" fill="none" stroke="var(--theme-chart-line)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${xy.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fff" stroke="var(--theme-chart-line)" stroke-width="2"><title>${formatDate(pts[i].date)} · ${values[i]} kg</title></circle><text x="${p[0]}" y="${p[1]-8}" text-anchor="middle" font-size="8" fill="#707681">${values[i]}</text>`).join('')}${xy.map((p,i)=>i===0||i===xy.length-1||(xy.length>3&&i===Math.floor((xy.length-1)/2))?`<text x="${p[0]}" y="${h-3}" text-anchor="middle" font-size="8" fill="#778397">${formatDate(pts[i].date)}</text>`:'').join('')}</svg>`;
   }
   function strengthStats(){
     const map={};
@@ -721,6 +722,7 @@
 
   function render(){
     closePopover();
+    document.getElementById('app').dataset.page=page;
     document.getElementById('topbar-subtitle').textContent = ({home:'私人训练日志',training:'计划与训练',exercises:'动作教学',history:'训练记录',mine:'身体数据与饮食'})[page];
     if(page==='home')renderHome();
     if(page==='training')renderTraining();
@@ -989,7 +991,7 @@
     } else if(dataTab==='diet'){
       c.innerHTML=`<div class="card"><div class="tabs diet-tabs"><button class="tab ${dietMode==='training'?'active':''}" data-diet="training">训练日</button><button class="tab ${dietMode==='rest'?'active':''}" data-diet="rest">休息日</button><button class="tab ${dietMode==='cheat'?'active':''}" data-diet="cheat">放纵餐</button></div>${dietHTML(dietMode)}</div>`;document.querySelectorAll('[data-diet]').forEach(b=>b.onclick=()=>{dietMode=b.dataset.diet;dietBatch=0;state.settings.dietMode=dietMode;saveState();renderMine();});document.getElementById('shuffle-diet').onclick=()=>{const size=dietMode==='cheat'?CHEAT_MENUS.length:(dietMode==='rest'?REST_DIET_MENUS.length:DIET_MENUS.length);dietBatch=(dietBatch+1)%size;renderMine();};
     } else {
-      const backup=backupStatus();c.innerHTML=`<section class="section"><div class="card"><div class="stat-row"><span>默认组间休息</span><button class="pill blue" id="rest-setting">${state.settings.restSeconds} 秒</button></div><div class="stat-row"><span>训练记录</span><strong>${state.workouts.length} 次</strong></div><div class="stat-row"><span>数据保存</span><strong>${storageFallback?'本机兼容存储':'IndexedDB'}</strong></div><div class="stat-row"><span>上次备份</span><strong>${backup.date}</strong></div><div class="stat-row backup-status-row ${backup.warning?'warning':''}"><span>备份状态</span><strong>${backup.text}</strong></div></div></section><div class="backup-grid"><button class="backup-action" id="export-btn">一键备份</button><button class="backup-action" id="import-btn">一键恢复</button></div><input id="import-file" type="file" accept="application/json,.json" hidden><div class="note ${backup.warning?'backup-reminder':''}" style="margin-top:12px">${backup.warning?'建议备份训练数据。':''} 数据保存在当前手机的 IndexedDB；换手机或清理浏览器数据后，可用 JSON 备份一键恢复。</div>`;c.querySelector('section.section').insertAdjacentHTML('afterend',themeSettingsHTML());document.querySelectorAll('[data-theme-option]').forEach(b=>b.onclick=()=>{state.settings.theme=b.dataset.themeOption;applyTheme();saveState();renderMine();});document.getElementById('rest-setting').onclick=showRestSetting;document.getElementById('export-btn').onclick=exportData;document.getElementById('import-btn').onclick=()=>document.getElementById('import-file').click();document.getElementById('import-file').onchange=e=>importDataFile(e.target.files?.[0]);
+      const backup=backupStatus();c.innerHTML=`<section class="section"><div class="card"><div class="stat-row"><span>默认组间休息</span><button class="pill blue" id="rest-setting">${state.settings.restSeconds} 秒</button></div><div class="stat-row"><span>训练记录</span><strong>${state.workouts.length} 次</strong></div><div class="stat-row"><span>数据保存</span><strong>${storageFallback?'本机兼容存储':'IndexedDB'}</strong></div><div class="stat-row"><span>上次备份</span><strong>${backup.date}</strong></div><div class="stat-row backup-status-row ${backup.warning?'warning':''}"><span>备份状态</span><strong>${backup.text}</strong></div></div></section><div class="backup-grid"><button class="backup-action" id="export-btn">一键备份</button><button class="backup-action" id="import-btn">一键恢复</button></div><input id="import-file" type="file" accept="application/json,.json" hidden><div class="note ${backup.warning?'backup-reminder':''}" style="margin-top:12px">${backup.warning?'建议备份训练数据。':''} 数据保存在当前手机的 IndexedDB；换手机或清理浏览器数据后，可用 JSON 备份一键恢复。</div>`;c.querySelector('section.section').insertAdjacentHTML('afterend',themeSettingsHTML());document.querySelectorAll('[data-theme-option]').forEach(b=>b.onclick=()=>{if(state.settings.theme===b.dataset.themeOption)return;state.settings.theme=b.dataset.themeOption;applyTheme();document.querySelectorAll('[data-theme-option]').forEach(option=>{const selected=option.dataset.themeOption===state.settings.theme;option.classList.toggle('active',selected);option.setAttribute('aria-pressed',String(selected));});saveState();});document.getElementById('rest-setting').onclick=showRestSetting;document.getElementById('export-btn').onclick=exportData;document.getElementById('import-btn').onclick=()=>document.getElementById('import-file').click();document.getElementById('import-file').onchange=e=>importDataFile(e.target.files?.[0]);
     }
     if(c && !c.innerHTML.trim()){dataTab='body';setTimeout(()=>{if(page==='mine')renderMine();},0);}
   }
@@ -1553,7 +1555,7 @@
   document.getElementById('modal-close').onclick=closeModal;
   modal.addEventListener('click',e=>{ if(e.target===modal)closeModal(); });
 
-  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.6.2').catch(()=>{}));
+  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.7.0').catch(()=>{}));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&page==='home')renderHome();});
   scheduleDateRefresh();
   render();
