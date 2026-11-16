@@ -3,6 +3,7 @@
 
   const CONFIG_URL='./exercise-muscle-mappings.json?v=3.6.0';
   const HOST_SELECTOR='[data-muscle-map]:not([data-muscle-map-ready])';
+  const WORKOUT_SELECTOR='[data-workout-muscles]:not([data-workout-muscles-ready])';
   const SVG_NS='http://www.w3.org/2000/svg';
   const EXPECTED_TEMPLATE_HASH='301CB13731FC3902E6F7C072EE3B1515859FB58A1BFD48E08B85CE577D04F697';
   let resourcesPromise=null;
@@ -158,20 +159,44 @@
     appendLabels(svg,orderedActiveRegions(exercise,resources.config),resources.config);
     host.setAttribute('data-muscle-map-ready','true');
   }
+  function workoutSummary(exerciseIds,resources){
+    const primary=new Set(),secondary=new Set(),config=resources.config;
+    exerciseIds.forEach(id=>{const item=config.exercises[id];if(!item)return;(item.primary||[]).forEach(region=>primary.add(region));(item.secondary||[]).forEach(region=>secondary.add(region));});
+    primary.forEach(region=>secondary.delete(region));
+    const label=id=>config.regions[id]?.label||id;
+    const svg=resources.template.cloneNode(true);
+    svg.removeAttribute('width');svg.removeAttribute('height');
+    svg.setAttribute('xmlns',SVG_NS);
+    svg.setAttribute('class','workout-anatomy-svg frozen-anatomy-template');
+    svg.setAttribute('aria-label','本次训练肌群分布');
+    colorTemplate(svg,{primary:[...primary],secondary:[...secondary]},config);
+    return {svg,primary:[...primary].map(label),secondary:[...secondary].map(label)};
+  }
+  function renderWorkoutHost(host,resources){
+    if(host.hasAttribute('data-workout-muscles-ready'))return;
+    const ids=(host.getAttribute('data-workout-muscles')||'').split(',').filter(Boolean);
+    const summary=workoutSummary(ids,resources);
+    host.replaceChildren(summary.svg);
+    const copy=host.closest('.workout-muscle-panel');
+    if(copy){const main=copy.querySelector('[data-workout-primary]'),extra=copy.querySelector('[data-workout-secondary]');if(main)main.textContent=summary.primary.join('、')||'暂无映射';if(extra)extra.textContent=summary.secondary.join('、')||'暂无映射';}
+    host.setAttribute('data-workout-muscles-ready','true');
+  }
   async function hydrate(root=document){
     const hosts=[];
     if(root&&root.matches&&root.matches(HOST_SELECTOR)) hosts.push(root);
     if(root&&root.querySelectorAll) hosts.push(...root.querySelectorAll(HOST_SELECTOR));
+    if(root&&root.matches&&root.matches(WORKOUT_SELECTOR)) hosts.push(root);
+    if(root&&root.querySelectorAll) hosts.push(...root.querySelectorAll(WORKOUT_SELECTOR));
     if(!hosts.length) return [];
     try{
       const resources=await loadResources();
-      hosts.forEach(host=>renderHost(host,resources));
+      hosts.forEach(host=>host.matches(WORKOUT_SELECTOR)?renderWorkoutHost(host,resources):renderHost(host,resources));
       return hosts;
     }catch(error){
       hosts.forEach(host=>{
         const loading=host.querySelector('.muscle-map-loading');
         if(loading) loading.innerHTML='<span class="muscle-map-empty">训练肌群图加载失败，请重新打开</span>';
-        host.setAttribute('data-muscle-map-ready','error');
+        host.setAttribute(host.hasAttribute('data-workout-muscles')?'data-workout-muscles-ready':'data-muscle-map-ready','error');
       });
       console.error('[TRAIN LOG] muscle map:',error);
       return [];
@@ -190,12 +215,12 @@
 
   const observer=new MutationObserver(mutations=>{
     const hasNewHost=mutations.some(mutation=>Array.from(mutation.addedNodes).some(node=>
-      node.nodeType===1&&((node.matches&&node.matches(HOST_SELECTOR))||(node.querySelector&&node.querySelector(HOST_SELECTOR)))
+      node.nodeType===1&&((node.matches&&(node.matches(HOST_SELECTOR)||node.matches(WORKOUT_SELECTOR)))||(node.querySelector&&(node.querySelector(HOST_SELECTOR)||node.querySelector(WORKOUT_SELECTOR))))
     ));
     if(hasNewHost) scheduleHydrate();
   });
   if(document.documentElement) observer.observe(document.documentElement,{childList:true,subtree:true});
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',scheduleHydrate,{once:true}); else scheduleHydrate();
   loadResources().catch(()=>{});
-  global.TrainLogMuscleMap=Object.freeze({render,hydrate,validate,templateHash:EXPECTED_TEMPLATE_HASH});
+  global.TrainLogMuscleMap=Object.freeze({render,hydrate,validate,getWorkoutSummary:async ids=>workoutSummary(ids,await loadResources()),templateHash:EXPECTED_TEMPLATE_HASH});
 })(window);

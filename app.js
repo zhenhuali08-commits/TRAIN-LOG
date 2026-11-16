@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.7.2';
+  const VERSION = '3.8.1';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -280,6 +280,7 @@
   EXERCISES.push(...NEW_CONTENT.exercises);
   ['plank','side_plank','dead_hang_grip'].forEach(id=>{const ex=EXERCISES.find(x=>x.id===id);if(ex)ex.metric='sec';});
   const BASE_PLAN_IDS=new Set(['p1','p2','p3','p4']);
+  const BASE_PROGRAM_ID='original_four_day';
 
   let PLAN = [
     {id:'p1',index:1,name:'胸 + 三头 + 侧肩',note:'第 1 练',exercises:[
@@ -418,7 +419,7 @@
     plans:JSON.parse(JSON.stringify(PLAN)),
     meta:{updatedAt:new Date().toISOString(),lastBackupAt:null,storage:'indexeddb'},
     wellness:{sleep:3,energy:3,soreness:2,updated:today()},
-    settings:{restSeconds:120,dietMode:'training',theme:'classic'},customExercises:[]
+    settings:{restSeconds:120,dietMode:'training',theme:'classic',activeProgramId:BASE_PROGRAM_ID,activeProgramNextDay:0,bodyTrendMetric:'weight'},customExercises:[]
   });
 
   let state = loadState();
@@ -443,6 +444,7 @@
   let dietMode = state.settings.dietMode || 'training';
   let pendingFreeWorkout=false;
   let historyEditDraft=null;
+  let reportPreviewUrl=null;
   let storageDb=null;
   let storageReady=false;
   let storageFallback=false;
@@ -572,6 +574,8 @@
   }
   function openModal(title,html){
     cleanupTutorialMedia();
+    if(reportPreviewUrl){URL.revokeObjectURL(reportPreviewUrl);reportPreviewUrl=null;}
+    modal.classList.remove('workout-report-mode');
     modalTitle.textContent=title;
     modalBody.innerHTML=html;
     resetModalScroll();
@@ -585,22 +589,34 @@
 
   function latestWorkout(){ return [...state.workouts].sort((a,b)=>new Date(b.endedAt)-new Date(a.endedAt))[0] || null; }
   function legacyPlans(){return PLAN.filter(p=>BASE_PLAN_IDS.has(p.id));}
-  function libraryPlans(){return PLAN.filter(p=>Array.isArray(p.days));}
+  function originalFourDayProgram(){return {id:BASE_PROGRAM_ID,name:'原四练计划',category:'基础训练',note:'每周 4 练 · 原版四练循环',days:legacyPlans().map(p=>({name:p.name,exercises:p.exercises,basePlanId:p.id}))};}
+  function libraryPlans(){return [originalFourDayProgram(),...PLAN.filter(p=>Array.isArray(p.days))];}
+  function selectedProgram(){const found=libraryPlans().find(p=>p.id===state.settings.activeProgramId);return found?.days?.length?found:originalFourDayProgram();}
   function programCategory(p){return p.category||LIBRARY_PROGRAMS.find(x=>x.id===p.id)?.category||'自定义';}
   function programCover(p){return PROGRAM_COVER_IDS.has(p.id)?`<img class="program-cover" src="./assets/plan-covers/${p.id}.webp" alt="" loading="lazy" decoding="async">`:`<div class="plan-day">${p.days.length}</div>`;}
-  function nextPlan(){const base=legacyPlans(),last=[...state.workouts].sort((a,b)=>new Date(b.endedAt)-new Date(a.endedAt)).find(w=>BASE_PLAN_IDS.has(w.planId));if(!last)return base[0];const idx=base.findIndex(p=>p.id===last.planId);return base[(idx+1)%base.length];}
+  function nextPlan(){
+    const selected=selectedProgram();
+    if(selected.id===BASE_PROGRAM_ID){const base=legacyPlans(),last=[...state.workouts].sort((a,b)=>new Date(b.endedAt)-new Date(a.endedAt)).find(w=>BASE_PLAN_IDS.has(w.planId));if(!last)return base[0];const idx=base.findIndex(p=>p.id===last.planId);return base[(idx+1)%base.length];}
+    const index=clamp(Number(state.settings.activeProgramNextDay)||0,0,Math.max(0,selected.days.length-1));
+    const day=selected.days[index];
+    return {id:selected.id,index:index+1,name:day.name,note:`${selected.name} · 第 ${index+1} 练`,exercises:day.exercises,programDayIndex:index};
+  }
+  function startRecommended(){const next=nextPlan();if(next.programDayIndex===undefined)startPlan(next.id);else startProgramDay(next.id,next.programDayIndex);}
   function totalVolume(w){ return round((w.exercises||[]).flatMap(e=>e.sets||[]).filter(s=>s.done&&!s.warmup).reduce((sum,s)=>sum+(Number(s.weight)||0)*(Number(s.reps)||0)+(s.drops||[]).reduce((a,d)=>a+(Number(d.weight)||0)*(Number(d.reps)||0),0),0),0); }
   function workingSets(w){ return (w.exercises||[]).flatMap(e=>e.sets||[]).filter(s=>s.done&&!s.warmup).length; }
   function weeklyWorkouts(){ const now=new Date(); const day=(now.getDay()+6)%7; const start=new Date(now); start.setHours(0,0,0,0); start.setDate(now.getDate()-day); return state.workouts.filter(w=>new Date(w.endedAt)>=start); }
   function lastBody(){ return [...(Array.isArray(state.bodyMetrics)?state.bodyMetrics:[])].sort((a,b)=>new Date(b.date)-new Date(a.date))[0] || null; }
   function sevenDayAvgWeight(){ const cutoff=Date.now()-7*86400000; const a=(Array.isArray(state.bodyMetrics)?state.bodyMetrics:[]).filter(m=>m.weight&&new Date(`${m.date}T23:59:59`).getTime()>=cutoff).map(m=>Number(m.weight)); if(!a.length)return null; return round(a.reduce((x,y)=>x+y,0)/a.length,1); }
-  function weightChart(){
-    const pts=[...(Array.isArray(state.bodyMetrics)?state.bodyMetrics:[])].filter(m=>num(m.weight)!==null&&m.date).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(-30);
-    if(pts.length<2)return '<div class="chart-empty">至少记录 2 次体重后显示趋势图。<br>建议尽量在早晨固定条件记录。</div>';
-    const values=pts.map(p=>Number(p.weight)),min=Math.min(...values)-.5,max=Math.max(...values)+.5,w=320,h=150,pad=20,span=Math.max(1,max-min);
-    const xy=pts.map((p,i)=>[pad+i*(w-2*pad)/(pts.length-1),h-pad-(Number(p.weight)-min)/span*(h-2*pad)]);
+  const BODY_TRENDS=[{key:'weight',label:'体重趋势',unit:'kg'},{key:'bodyFat',label:'体脂率趋势',unit:'%'},{key:'skeletalMuscle',label:'骨骼肌趋势',unit:'kg'}];
+  function bodyTrend(){return BODY_TRENDS.find(x=>x.key===state.settings.bodyTrendMetric)||BODY_TRENDS[0];}
+  function weightChart(metric='weight'){
+    const trend=BODY_TRENDS.find(x=>x.key===metric)||BODY_TRENDS[0];
+    const pts=[...(Array.isArray(state.bodyMetrics)?state.bodyMetrics:[])].filter(m=>num(m[trend.key])!==null&&m.date).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(-30);
+    if(pts.length<2)return `<div class="chart-empty">至少记录 2 次${trend.label.replace('趋势','')}后显示趋势图。<br>建议尽量在固定条件下记录。</div>`;
+    const values=pts.map(p=>Number(p[trend.key])),min=Math.min(...values)-.5,max=Math.max(...values)+.5,w=320,h=150,pad=20,span=Math.max(1,max-min);
+    const xy=pts.map((p,i)=>[pad+i*(w-2*pad)/(pts.length-1),h-pad-(Number(p[trend.key])-min)/span*(h-2*pad)]);
     const path=xy.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
-    return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="体重趋势"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#e7e9ee"/><path d="${path}" fill="none" stroke="var(--theme-chart-line)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${xy.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fff" stroke="var(--theme-chart-line)" stroke-width="2"><title>${formatDate(pts[i].date)} · ${values[i]} kg</title></circle><text x="${p[0]}" y="${p[1]-8}" text-anchor="middle" font-size="8" fill="#707681">${values[i]}</text>`).join('')}${xy.map((p,i)=>i===0||i===xy.length-1||(xy.length>3&&i===Math.floor((xy.length-1)/2))?`<text x="${p[0]}" y="${h-3}" text-anchor="middle" font-size="8" fill="#778397">${formatDate(pts[i].date)}</text>`:'').join('')}</svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${trend.label}"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#e7e9ee"/><path d="${path}" fill="none" stroke="var(--theme-chart-line)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${xy.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fff" stroke="var(--theme-chart-line)" stroke-width="2"><title>${formatDate(pts[i].date)} · ${values[i]} ${trend.unit}</title></circle><text x="${p[0]}" y="${p[1]-8}" text-anchor="middle" font-size="8" fill="#707681">${values[i]}</text>`).join('')}${xy.map((p,i)=>i===0||i===xy.length-1||(xy.length>3&&i===Math.floor((xy.length-1)/2))?`<text x="${p[0]}" y="${h-3}" text-anchor="middle" font-size="8" fill="#778397">${formatDate(pts[i].date)}</text>`:'').join('')}</svg>`;
   }
   function strengthStats(){
     const map={};
@@ -751,10 +767,10 @@
 
       <section class="section">
         <div class="section-head"><div class="section-title">下一练</div><button class="section-link" data-go="training">查看计划</button></div>
-        <div class="card next-card" data-start-plan="${next.id}">
+        <div class="card next-card" data-start-recommended>
           <div class="next-index">${next.index}</div><div class="next-info"><strong>${esc(next.name)}</strong><small>${next.exercises.length} 个动作 · ${next.note}</small></div><div class="arrow">›</div>
         </div>
-        <button class="primary-btn" style="margin-top:10px" data-start-plan="${next.id}">开始训练</button>
+        <button class="primary-btn" style="margin-top:10px" data-start-recommended>开始训练</button>
       </section>
 
       <section class="section">
@@ -768,8 +784,8 @@
       <section class="section">
         <div class="section-head"><div class="section-title">本周</div><button class="section-link" data-go="history">训练记录</button></div>
         <div class="card weekly-card">
-          <div class="stat-row"><span>力量训练</span><strong>${week.length} / 4</strong></div>
-          <div class="progress-bar"><i style="width:${clamp(week.length/4*100,0,100)}%"></i></div>
+          <div class="stat-row"><span>力量训练</span><strong>${week.length} / ${selectedProgram().days.length}</strong></div>
+          <div class="progress-bar"><i style="width:${clamp(week.length/selectedProgram().days.length*100,0,100)}%"></i></div>
           <div class="stat-row"><span>完成有效组</span><strong>${week.reduce((s,w)=>s+workingSets(w),0)} 组</strong></div>
           <div class="stat-row"><span>训练容量</span><strong>${Math.round(week.reduce((s,w)=>s+totalVolume(w),0)).toLocaleString()} kg</strong></div>
         </div>
@@ -785,23 +801,31 @@
     document.getElementById('wellness-btn').onclick=showWellness;
   }
 
+  function activeCycleCards(program){
+    if(program.id===BASE_PROGRAM_ID)return legacyPlans().map(p=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${p.index}</div><div class="plan-info"><strong>${esc(p.name)}</strong><small>${p.exercises.length} 个动作 · ${esc(p.note)}</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-plan="${p.id}">查看动作</button><button class="secondary-btn" data-start-plan="${p.id}">开始训练</button></div></div>`).join('');
+    return program.days.map((day,i)=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${i+1}</div><div class="plan-info"><strong>${esc(day.name)}</strong><small>${day.exercises.length} 个动作 · 第 ${i+1} 练</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-active-day="${i}">查看动作</button><button class="secondary-btn" data-start-active-day="${i}">开始训练</button></div></div>`).join('');
+  }
   function renderTraining(categoryScrollLeft){
     if(state.activeWorkout){ renderActiveWorkout(); return; }
     const history=[...state.workouts].sort((a,b)=>new Date(b.endedAt)-new Date(a.endedAt));
     const next=nextPlan();
+    const selected=selectedProgram();
     const plans=libraryPlans();
     const shownPlans=plans.filter(p=>activeProgramCategory==='全部'||programCategory(p)===activeProgramCategory);
     main.innerHTML=`
-      ${pageIntro('训练','训练计划和当天训练合在一起，按第 1 → 4 练循环，不绑定星期几。')}
-      <div class="card current-plan"><div class="small muted">建议下一练</div><h2>${esc(next.name)}</h2><div class="small muted">${next.exercises.length} 个动作 · 第 ${next.index} 练</div><button class="primary-btn" style="margin-top:14px" data-start-plan="${next.id}">开始训练</button><button class="secondary-btn neutral free-training-btn" style="margin-top:9px;width:100%" id="free-workout-btn">＋ 自由训练</button></div>
-      <section class="section"><div class="section-head"><div class="section-title">四练计划</div></div>${legacyPlans().map(p=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${p.index}</div><div class="plan-info"><strong>${esc(p.name)}</strong><small>${p.exercises.length} 个动作 · ${esc(p.note)}</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-plan="${p.id}">查看动作</button><button class="secondary-btn" data-start-plan="${p.id}">开始训练</button></div></div>`).join('')}</section>
-      <section class="section"><div class="section-head"><div class="section-title">计划库 · ${plans.length} 套</div><button class="section-link" id="create-program-btn">＋ 自定义计划</button></div><div class="filter-chips program-filters">${['全部',...PROGRAM_CATEGORIES].map(category=>{const count=category==='全部'?plans.length:plans.filter(p=>programCategory(p)===category).length;return `<button class="chip ${activeProgramCategory===category?'active':''}" data-program-category="${category}">${category} ${count}</button>`;}).join('')}</div><div class="program-list">${shownPlans.map(p=>`<div class="card plan-card library-program-card"><div class="plan-top">${programCover(p)}<div class="plan-info"><strong>${esc(p.name)}</strong><small>${esc(p.note||`${p.days.length} 练`)} · ${p.days.length} 个训练日</small><span class="pill blue program-category">${esc(programCategory(p))}</span></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-program="${esc(p.id)}">查看与编辑</button><button class="secondary-btn" data-start-program="${esc(p.id)}">选择训练日</button></div></div>`).join('')||'<div class="card empty">当前分类暂无计划，可创建自定义计划。</div>'}</div></section>
+      ${pageIntro('训练',selected.id===BASE_PROGRAM_ID?'训练计划和当天训练合在一起，按第 1 → 4 练循环，不绑定星期几。':`当前使用「${selected.name}」，按训练日顺序循环，不绑定星期几。`)}
+      <div class="card current-plan"><div class="small muted">建议下一练</div><h2>${esc(next.name)}</h2><div class="small muted">${next.exercises.length} 个动作 · 第 ${next.index} 练</div><button class="primary-btn" style="margin-top:14px" data-start-recommended>开始训练</button><button class="secondary-btn neutral free-training-btn" style="margin-top:9px;width:100%" id="free-workout-btn">＋ 自由训练</button></div>
+      <section class="section"><div class="section-head"><div class="section-title">${selected.id===BASE_PROGRAM_ID?'四练计划':esc(selected.name)}</div></div>${activeCycleCards(selected)}</section>
+      <section class="section"><div class="section-head"><div class="section-title">计划库 · ${plans.length} 套</div><button class="section-link" id="create-program-btn">＋ 自定义计划</button></div><div class="filter-chips program-filters">${['全部',...PROGRAM_CATEGORIES].map(category=>{const count=category==='全部'?plans.length:plans.filter(p=>programCategory(p)===category).length;return `<button class="chip ${activeProgramCategory===category?'active':''}" data-program-category="${category}">${category} ${count}</button>`;}).join('')}</div><div class="program-list">${shownPlans.map(p=>`<div class="card plan-card library-program-card"><div class="plan-top">${programCover(p)}<div class="plan-info"><strong>${esc(p.name)}</strong><small>${esc(p.note||`${p.days.length} 练`)} · ${p.days.length} 个训练日</small><span class="pill blue program-category">${esc(programCategory(p))}</span>${selected.id===p.id?'<span class="pill program-selected">当前计划</span>':''}</div></div><div class="plan-actions"><button class="secondary-btn neutral" data-view-program="${esc(p.id)}">查看与编辑</button><button class="secondary-btn" data-start-program="${esc(p.id)}">替换当前训练计划</button></div></div>`).join('')||'<div class="card empty">当前分类暂无计划，可创建自定义计划。</div>'}</div></section>
       <section class="section"><div class="section-head"><div class="section-title">最近训练</div><button class="section-link" data-go="history">查看全部</button></div>${history.length?history.slice(0,3).map(historyItem).join(''):'<div class="card empty">还没有训练记录</div>'}</section>`;
     bindCommon();
     if(categoryScrollLeft!==undefined)main.querySelector('.program-filters').scrollLeft=categoryScrollLeft;
     document.querySelectorAll('[data-program-category]').forEach(b=>b.onclick=()=>{const scrollLeft=b.parentElement.scrollLeft;activeProgramCategory=b.dataset.programCategory;renderTraining(scrollLeft);});
     document.querySelectorAll('[data-view-plan]').forEach(b=>b.onclick=()=>showPlan(b.dataset.viewPlan));
-    document.querySelectorAll('[data-view-program],[data-start-program]').forEach(b=>b.onclick=()=>showProgram(b.dataset.viewProgram||b.dataset.startProgram));
+    document.querySelectorAll('[data-view-program]').forEach(b=>b.onclick=()=>showProgram(b.dataset.viewProgram));
+    document.querySelectorAll('[data-start-program]').forEach(b=>b.onclick=()=>confirmReplaceProgram(b.dataset.startProgram));
+    document.querySelectorAll('[data-view-active-day]').forEach(b=>b.onclick=()=>showProgramDay(selected.id,Number(b.dataset.viewActiveDay)));
+    document.querySelectorAll('[data-start-active-day]').forEach(b=>b.onclick=()=>startProgramDay(selected.id,Number(b.dataset.startActiveDay)));
     document.getElementById('create-program-btn').onclick=createProgram;
     document.getElementById('free-workout-btn').onclick=startFreeWorkout;
   }
@@ -981,9 +1005,11 @@
     document.querySelectorAll('[data-mine-tab]').forEach(b=>b.onclick=()=>{dataTab=b.dataset.mineTab;renderMine();});
     const c=document.getElementById('mine-content');
     if(dataTab==='body'){
+      const trend=bodyTrend();
       c.innerHTML=`<div class="grid2 equal-metrics"><div class="card metric-card"><small>最新体重</small><strong>${body?.weight?body.weight+' kg':'—'}</strong><div class="metric-delta">7 日平均 ${avg?avg+' kg':'—'}</div></div><div class="card metric-card"><small>腰围</small><strong>${body?.waist?body.waist+' cm':'—'}</strong><div class="metric-delta muted">每周固定条件记录</div></div></div>
-      <section class="section"><div class="section-head"><div class="section-title">体重趋势</div><button class="section-link" type="button" data-add-body>＋ 记录</button></div><div class="card"><div class="chart">${weightChart()}</div></div></section>
+      <section class="section"><div class="section-head"><button class="section-title trend-title" type="button" data-cycle-body-trend aria-label="切换身体趋势，当前为${trend.label}">${trend.label}<span aria-hidden="true">⌄</span></button><button class="section-link" type="button" data-add-body>＋ 记录</button></div><div class="card"><div class="chart" id="body-trend-chart">${weightChart(trend.key)}</div></div></section>
       <section class="section"><div class="section-title" style="margin-bottom:10px">最近记录</div><div class="list">${[...state.bodyMetrics].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(m=>`<button class="list-item" style="width:100%;text-align:left" data-edit-body="${m.id}"><div class="grow"><strong>${formatDate(m.date)}</strong><small>${[m.bodyFat?`体脂 ${m.bodyFat}%`:null,m.skeletalMuscle?`骨骼肌 ${m.skeletalMuscle}kg`:null,m.waist?`腰围 ${m.waist}cm`:null].filter(Boolean).join(' · ')||'身体记录'}</small></div><strong>${m.weight?m.weight+' kg':'—'}</strong></button>`).join('')}</div></section>`;
+      c.querySelector('[data-cycle-body-trend]').onclick=()=>{const index=BODY_TRENDS.findIndex(x=>x.key===bodyTrend().key),next=BODY_TRENDS[(index+1)%BODY_TRENDS.length];state.settings.bodyTrendMetric=next.key;saveState();const button=c.querySelector('[data-cycle-body-trend]');button.innerHTML=`${next.label}<span aria-hidden="true">⌄</span>`;button.setAttribute('aria-label',`切换身体趋势，当前为${next.label}`);c.querySelector('#body-trend-chart').innerHTML=weightChart(next.key);};
       document.querySelectorAll('[data-add-body]').forEach(b=>b.onclick=()=>showBodyForm());document.querySelectorAll('[data-edit-body]').forEach(b=>b.onclick=()=>showBodyForm(b.dataset.editBody));
     } else if(dataTab==='strength'){
       const stats=strengthStats(); c.innerHTML=stats.length?`<div class="list">${stats.map(s=>`<button class="list-item" style="width:100%;text-align:left" data-strength="${s.id}"><div class="grow"><strong>${esc(s.name)}</strong><small>${s.sessions} 次训练记录</small></div><div class="strength-values"><strong>${s.bestWeight} kg</strong><small>最高重量</small><b>估算 1RM ${s.best1RM} kg</b></div></button>`).join('')}</div>`:'<div class="card empty">完成训练后自动生成力量趋势。</div>';document.querySelectorAll('[data-strength]').forEach(b=>b.onclick=()=>showStrength(b.dataset.strength));
@@ -1089,6 +1115,7 @@
   function bindCommon(){
     document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.mineTarget)dataTab=b.dataset.mineTarget;setPage(b.dataset.go);});
     document.querySelectorAll('[data-start-plan]').forEach(b=>b.onclick=()=>startPlan(b.dataset.startPlan));
+    document.querySelectorAll('[data-start-recommended]').forEach(b=>b.onclick=startRecommended);
     document.querySelectorAll('[data-history]').forEach(b=>b.onclick=()=>showWorkoutDetail(b.dataset.history));
   }
 
@@ -1103,8 +1130,8 @@
   function bindActiveWorkout(){
     document.querySelectorAll('.training-exercise').forEach(section=>{
       const ei=Number(section.dataset.exIndex);
-      section.querySelectorAll('input[data-field]').forEach(inp=>inp.onchange=()=>{const si=Number(inp.dataset.set),field=inp.dataset.field;state.activeWorkout.exercises[ei].sets[si][field]=inp.value;saveState();});
-      section.querySelectorAll('input[data-drop-field]').forEach(inp=>inp.onchange=()=>{const si=Number(inp.dataset.set),di=Number(inp.dataset.drop),field=inp.dataset.dropField;state.activeWorkout.exercises[ei].sets[si].drops[di][field]=inp.value;saveState();});
+      section.querySelectorAll('input[data-field]').forEach(inp=>{inp.oninput=()=>{const si=Number(inp.dataset.set),field=inp.dataset.field;state.activeWorkout.exercises[ei].sets[si][field]=inp.value;};inp.onchange=saveState;});
+      section.querySelectorAll('input[data-drop-field]').forEach(inp=>{inp.oninput=()=>{const si=Number(inp.dataset.set),di=Number(inp.dataset.drop),field=inp.dataset.dropField;state.activeWorkout.exercises[ei].sets[si].drops[di][field]=inp.value;};inp.onchange=saveState;});
       section.querySelectorAll('[data-done]').forEach(btn=>btn.onclick=()=>{const si=Number(btn.dataset.done),set=state.activeWorkout.exercises[ei].sets[si];set.done=!set.done;saveState();if(set.done)startRest();else renderActiveWorkout();});
       section.querySelectorAll('[data-warmup]').forEach(btn=>btn.onclick=()=>{const si=Number(btn.dataset.warmup),set=state.activeWorkout.exercises[ei].sets[si];set.warmup=!set.warmup;saveState();renderActiveWorkout();});
       section.querySelectorAll('[data-set-menu]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();showSetMenu(ei,Number(btn.dataset.setMenu),btn);});
@@ -1181,7 +1208,7 @@
     document.getElementById('confirm-finish').onclick=()=>completeWorkout(feeling,fatigue);
   }
   function completeWorkout(feeling,fatigue){
-    const w=state.activeWorkout; w.endedAt=new Date().toISOString();w.feeling=feeling;w.fatigue=fatigue;w.exercises=w.exercises.map(e=>({...e,sets:e.sets.filter(s=>s.done||s.weight||s.reps||s.minutes)})); state.workouts.push(w);state.activeWorkout=null;saveState();closeModal();restRemaining=0;clearInterval(timerInterval);setPage('history');toast('训练已保存');
+    const w=state.activeWorkout; w.endedAt=new Date().toISOString();w.feeling=feeling;w.fatigue=fatigue;w.exercises=w.exercises.map(e=>({...e,sets:e.sets.filter(s=>s.done||s.weight||s.reps||s.minutes)})); state.workouts.push(w);if(w.planId===state.settings.activeProgramId&&Number.isInteger(w.programDayIndex)){const program=selectedProgram();state.settings.activeProgramNextDay=(w.programDayIndex+1)%program.days.length;}state.activeWorkout=null;saveState();closeModal();restRemaining=0;clearInterval(timerInterval);setPage('history');toast('训练已保存');
   }
   function finishOrCancel(){
     openModal('结束当前训练',`<div class="note">未完成的训练也可以继续保留。只有选择“取消本次训练”才会删除当前进度。</div><button class="primary-btn" style="margin-top:14px" id="keep-training">继续训练</button><button class="secondary-btn danger" style="width:100%;margin-top:8px" id="cancel-current">取消本次训练</button>`);
@@ -1192,14 +1219,22 @@
     openModal('创建自定义计划',`<div class="form-grid"><div class="field full"><label>计划名称</label><input id="program-new-name" placeholder="例如：我的三练计划"></div><div class="field full"><label>说明</label><input id="program-new-note" placeholder="例如：每周 3 练"></div></div><button class="primary-btn" id="program-create-save" style="margin-top:14px">创建计划</button>`);
     document.getElementById('program-create-save').onclick=()=>{const name=document.getElementById('program-new-name').value.trim();if(!name){toast('先填写计划名称');return;}const p={id:'program_'+uid(),name,category:'自定义',note:document.getElementById('program-new-note').value.trim()||'自定义计划',days:[{name:'第 1 练',exercises:[]}]};PLAN.push(p);activeProgramCategory='自定义';saveState();renderTraining();showProgram(p.id);};
   }
+  function confirmReplaceProgram(id){
+    const program=libraryPlans().find(p=>p.id===id);if(!program)return;
+    if(!program.days.length){toast('请先添加训练日');return;}
+    openModal('替换当前训练计划',`<div class="info-note">将当前训练计划替换为「${esc(program.name)}」？建议下一练会从第 1 个训练日开始，原四练、已有记录和进行中的训练均会保留。</div><button class="primary-btn" id="confirm-program-replace" style="margin-top:14px">确认替换</button><button class="secondary-btn neutral" id="cancel-program-replace" style="width:100%;margin-top:10px">暂不替换</button>`);
+    document.getElementById('confirm-program-replace').onclick=()=>{state.settings.activeProgramId=program.id;state.settings.activeProgramNextDay=0;saveState();closeModal();renderTraining();toast('当前训练计划已替换');};
+    document.getElementById('cancel-program-replace').onclick=closeModal;
+  }
   function showProgram(id){
+    if(id===BASE_PROGRAM_ID){const p=originalFourDayProgram();openModal(p.name,`<div class="info-note">保留原有四练动作与循环顺序，选择本计划后从第 1 练开始。</div><section class="section"><div class="section-title">训练日 · 4</div>${legacyPlans().map(day=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${day.index}</div><div class="plan-info"><strong>${esc(day.name)}</strong><small>${day.exercises.length} 个动作</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-base-day="${day.id}">查看与编辑</button><button class="secondary-btn" data-start-plan="${day.id}">开始训练</button></div></div>`).join('')}</section><button class="primary-btn" id="base-program-replace">替换当前训练计划</button>`);document.querySelectorAll('[data-base-day]').forEach(b=>b.onclick=()=>showPlan(b.dataset.baseDay));document.querySelectorAll('[data-start-plan]').forEach(b=>b.onclick=()=>{closeModal();startPlan(b.dataset.startPlan);});document.getElementById('base-program-replace').onclick=()=>confirmReplaceProgram(BASE_PROGRAM_ID);return;}
     const p=planById(id);if(!p||!Array.isArray(p.days))return;
     openModal(p.name,`${p.description?`<div class="info-note">${esc(p.description)}${programCategory(p)==='跑步专项力量'?' 单侧动作按每侧计数；静态保持按秒记录。':''}</div>`:''}<div class="form-grid"><div class="field full"><label>计划名称</label><input id="program-name" value="${esc(p.name)}"></div><div class="field full"><label>计划说明</label><input id="program-note" value="${esc(p.note||'')}"></div></div><button class="secondary-btn neutral" id="program-rename" style="width:100%;margin-top:10px">保存名称与说明</button><section class="section"><div class="section-head"><div class="section-title">训练日 · ${p.days.length}</div></div>${p.days.map((d,i)=>`<div class="card plan-card"><div class="plan-top"><div class="plan-day">${i+1}</div><div class="plan-info"><strong>${esc(d.name)}</strong><small>${d.exercises.length} 个动作</small></div></div><div class="plan-actions"><button class="secondary-btn neutral" data-program-day="${i}">查看与编辑</button><button class="secondary-btn" data-program-start="${i}">开始训练</button></div></div>`).join('')}</section><button class="secondary-btn neutral" id="program-add-day" style="width:100%">＋ 添加训练日</button><button class="secondary-btn danger" id="program-delete" style="width:100%;margin-top:10px">删除计划</button>`);
     document.getElementById('program-rename').onclick=()=>{const name=document.getElementById('program-name').value.trim();if(!name){toast('计划名称不能为空');return;}p.name=name;p.note=document.getElementById('program-note').value.trim();saveState();renderTraining();showProgram(p.id);toast('计划已保存');};
     document.querySelectorAll('[data-program-day]').forEach(b=>b.onclick=()=>showProgramDay(p.id,Number(b.dataset.programDay)));
     document.querySelectorAll('[data-program-start]').forEach(b=>b.onclick=()=>startProgramDay(p.id,Number(b.dataset.programStart)));
     document.getElementById('program-add-day').onclick=()=>{openModal('添加训练日',`<div class="field"><label>训练日名称</label><input id="new-day-name" placeholder="例如：上肢 A"></div><button class="primary-btn" id="new-day-save" style="margin-top:14px">添加</button>`);document.getElementById('new-day-save').onclick=()=>{const name=document.getElementById('new-day-name').value.trim()||`第 ${p.days.length+1} 练`;p.days.push({name,exercises:[]});saveState();renderTraining();showProgramDay(p.id,p.days.length-1);};};
-    document.getElementById('program-delete').onclick=()=>{if(!confirm(`删除计划“${p.name}”？已有训练记录不会删除。`))return;if(LIBRARY_PROGRAMS.some(x=>x.id===p.id)){state.settings.deletedProgramIds=[...new Set([...(state.settings.deletedProgramIds||[]),p.id])];}PLAN=PLAN.filter(x=>x.id!==p.id);saveState();closeModal();renderTraining();toast('计划已删除');};
+    document.getElementById('program-delete').onclick=()=>{if(!confirm(`删除计划“${p.name}”？已有训练记录不会删除。`))return;if(LIBRARY_PROGRAMS.some(x=>x.id===p.id)){state.settings.deletedProgramIds=[...new Set([...(state.settings.deletedProgramIds||[]),p.id])];}PLAN=PLAN.filter(x=>x.id!==p.id);if(state.settings.activeProgramId===p.id){state.settings.activeProgramId=BASE_PROGRAM_ID;state.settings.activeProgramNextDay=0;}saveState();closeModal();renderTraining();toast('计划已删除');};
   }
   function showProgramDay(programId,dayIndex){
     const p=planById(programId),d=p?.days?.[dayIndex];if(!d)return;
@@ -1220,7 +1255,7 @@
   function startProgramDay(programId,dayIndex){
     if(state.activeWorkout){toast('已有进行中的训练');closeModal();setPage('training');return;}
     const p=planById(programId),d=p?.days?.[dayIndex];if(!d||!d.exercises.length){toast('请先添加训练动作');return;}
-    state.activeWorkout={id:uid(),planId:p.id,name:`${p.name} · ${d.name}`,startedAt:new Date().toISOString(),exercises:d.exercises.map(([id,sets,min,max])=>({exerciseId:id,target:{sets,min,max},sets:Array.from({length:sets},()=>({weight:'',reps:'',minutes:'',warmup:false,done:false,drops:[]}))}))};
+    state.activeWorkout={id:uid(),planId:p.id,programDayIndex:dayIndex,name:`${p.name} · ${d.name}`,startedAt:new Date().toISOString(),exercises:d.exercises.map(([id,sets,min,max])=>({exerciseId:id,target:{sets,min,max},sets:Array.from({length:sets},()=>({weight:'',reps:'',minutes:'',warmup:false,done:false,drops:[]}))}))};
     saveState();closeModal();setPage('training');
   }
   function showPlan(id){ const p=planById(id); if(!p)return; openModal(`第 ${p.index} 练 · ${p.name}`,`<div class="card flat plan-edit-list">${p.exercises.map(([eid,sets,min,max],i)=>{const e=exercise(eid);return `<div class="exercise-row plan-edit-row"><div class="exercise-thumb">${exerciseVisual(e)}</div><div class="grow plan-ex-copy"><strong>${esc(e.name)}</strong><small>${e.group} · ${e.primary}</small></div><span class="pill">${sets}×${min}–${max}</span><div class="plan-mini-actions"><button data-plan-up="${i}">↑</button><button data-plan-down="${i}">↓</button><button data-plan-replace="${i}">替</button><button data-plan-delete="${i}">×</button></div></div>`;}).join('')}</div><button class="secondary-btn neutral" style="width:100%;margin-top:10px" id="plan-add-action">＋ 添加动作</button><button class="primary-btn" style="margin-top:10px" id="modal-start-plan">开始训练</button>`);document.getElementById('modal-start-plan').onclick=()=>{closeModal();startPlan(id);};document.getElementById('plan-add-action').onclick=()=>showPlanExercisePicker(p,'add');document.querySelectorAll('[data-plan-up]').forEach(b=>b.onclick=()=>movePlanExercise(p,Number(b.dataset.planUp),-1));document.querySelectorAll('[data-plan-down]').forEach(b=>b.onclick=()=>movePlanExercise(p,Number(b.dataset.planDown),1));document.querySelectorAll('[data-plan-delete]').forEach(b=>b.onclick=()=>{p.exercises.splice(Number(b.dataset.planDelete),1);saveState();showPlan(p.id);});document.querySelectorAll('[data-plan-replace]').forEach(b=>b.onclick=()=>showPlanExercisePicker(p,'replace',Number(b.dataset.planReplace))); }
@@ -1464,7 +1499,38 @@
   }
 
   function showWorkoutDetail(id){
-    const w=state.workouts.find(x=>x.id===id); if(!w)return; openModal(w.name,`<div class="card"><div class="stat-row"><span>日期</span><strong>${formatDateTime(w.endedAt)}</strong></div><div class="stat-row"><span>训练时间</span><strong>${durationText(new Date(w.endedAt)-new Date(w.startedAt))}</strong></div><div class="stat-row"><span>有效组</span><strong>${workingSets(w)} 组</strong></div><div class="stat-row"><span>训练容量</span><strong>${Math.round(totalVolume(w)).toLocaleString()} kg</strong></div></div><section class="section"><div class="section-title" style="margin-bottom:10px">训练内容</div>${(w.exercises||[]).map(e=>`<div class="card flat history-ex"><div class="exercise-thumb">${exerciseVisual(exercise(e.exerciseId))}</div><div><strong>${esc(e.customName || exercise(e.exerciseId).name)}</strong><div class="small muted" style="margin-top:6px">${esc(setSummary(e.sets,exercise(e.exerciseId)))}</div></div></div>`).join('')}</section><div class="history-detail-actions"><button class="secondary-btn" id="edit-workout">编辑记录</button><button class="secondary-btn danger" id="delete-workout">删除这次训练</button></div>`); document.getElementById('edit-workout').onclick=()=>showEditWorkout(id);document.getElementById('delete-workout').onclick=()=>{state.workouts=state.workouts.filter(x=>x.id!==id);saveState();closeModal();render();toast('训练记录已删除');};
+    const w=state.workouts.find(x=>x.id===id);if(!w)return;
+    const ids=(w.exercises||[]).map(entry=>entry.exerciseId).filter(Boolean).join(',');
+    openModal(w.name,`<div class="workout-report" id="workout-report">
+      <div class="report-brand"><span class="report-brand-mark" aria-hidden="true"></span><div><strong>TRAIN LOG</strong><small>私人训练日志</small></div></div>
+      <div class="report-heading"><h1>${esc(w.name)}</h1><time>${formatDateTime(w.endedAt)}</time></div>
+      <div class="workout-summary-card">
+        <div class="workout-overview"><h2>▥ 训练概览</h2><div class="report-stat"><span>训练时间</span><strong>${durationText(new Date(w.endedAt)-new Date(w.startedAt))}</strong></div><div class="report-stat"><span>有效组</span><strong>${workingSets(w)} 组</strong></div><div class="report-stat"><span>训练容量</span><strong>${Math.round(totalVolume(w)).toLocaleString()} kg</strong></div></div>
+        <div class="workout-muscle-panel"><h2>◎ 肌群分布</h2><div class="workout-muscle-copy"><div><b>主要肌群</b><span data-workout-primary>正在汇总</span></div><div><b>次要肌群</b><span data-workout-secondary>正在汇总</span></div></div><div class="workout-anatomy" data-workout-muscles="${esc(ids)}">肌群图加载中</div></div>
+      </div>
+      <div class="report-content-head"><h2>训练内容</h2><span>共 ${(w.exercises||[]).length} 个动作</span></div>
+      <div class="report-exercise-list">${(w.exercises||[]).map(entry=>{const ex=exercise(entry.exerciseId);return `<div class="report-exercise"><div class="exercise-thumb">${exerciseVisual(ex)}</div><div class="report-exercise-copy"><strong>${esc(entry.customName||ex.name)}</strong><small>${esc(setSummary(entry.sets||[],ex)||'暂无已完成组')}</small></div></div>`;}).join('')||'<div class="card empty">这次训练没有动作记录</div>'}</div>
+      </div><div class="history-detail-actions report-actions"><button class="secondary-btn" id="share-workout">分享</button><button class="secondary-btn" id="edit-workout">编辑记录</button><button class="secondary-btn danger" id="delete-workout">删除这次训练</button></div>`);
+    modal.classList.add('workout-report-mode');
+    window.TrainLogMuscleMap?.hydrate(modalBody);
+    document.getElementById('share-workout').onclick=()=>showWorkoutShare(id);
+    document.getElementById('edit-workout').onclick=()=>showEditWorkout(id);
+    document.getElementById('delete-workout').onclick=()=>{state.workouts=state.workouts.filter(x=>x.id!==id);saveState();closeModal();render();toast('训练记录已删除');};
+  }
+  function showWorkoutShare(id){
+    const w=state.workouts.find(x=>x.id===id);if(!w)return;
+    openModal('分享训练记录',`<div class="share-preview" id="share-preview">正在生成分享图片…</div><div class="share-actions"><button class="primary-btn" id="save-workout-image" disabled>保存图片</button><button class="secondary-btn" id="system-share-workout" disabled>分享到其他应用</button><button class="secondary-btn neutral" id="back-workout-detail">返回记录</button></div><p class="small muted" style="margin-top:12px">系统分享可选择手机中支持图片分享的应用；可用选项由手机系统决定。</p>`);
+    document.getElementById('back-workout-detail').onclick=()=>showWorkoutDetail(id);
+    const preview=document.getElementById('share-preview'),save=document.getElementById('save-workout-image'),share=document.getElementById('system-share-workout');
+    const entries=(w.exercises||[]).map(entry=>{const ex=exercise(entry.exerciseId),path=GYM_DIRECT[entry.exerciseId]||'';return {name:entry.customName||ex.name,sets:setSummary(entry.sets||[],ex)||'暂无已完成组',imageUrl:path?(path.startsWith('assets/')?`./${path}`:`${GYM_BASE}/${path}`):''};});
+    window.TrainLogMuscleMap.getWorkoutSummary((w.exercises||[]).map(e=>e.exerciseId)).then(summary=>window.TrainLogReportImage.create({name:w.name,date:formatDateTime(w.endedAt),duration:durationText(new Date(w.endedAt)-new Date(w.startedAt)),sets:workingSets(w),volume:Math.round(totalVolume(w)),entries,summary})).then(blob=>{
+      if(!preview.isConnected)return;
+      reportPreviewUrl=URL.createObjectURL(blob);preview.innerHTML=`<img src="${reportPreviewUrl}" alt="训练记录分享图片预览">`;
+      save.disabled=false;save.onclick=()=>{const link=document.createElement('a');link.href=reportPreviewUrl;link.download=`TRAIN-LOG-${(w.endedAt||'').slice(0,10)}.png`;link.click();};
+      const file=new File([blob],`TRAIN-LOG-${(w.endedAt||'').slice(0,10)}.png`,{type:'image/png'});
+      if(navigator.share&&navigator.canShare?.({files:[file]})){share.disabled=false;share.onclick=()=>navigator.share({files:[file],title:`TRAIN LOG · ${w.name}`}).catch(error=>{if(error.name!=='AbortError')toast('分享未完成，可先保存图片');});}
+      else share.textContent='当前设备不支持系统分享';
+    }).catch(error=>{console.error('[TRAIN LOG] share image:',error);if(preview.isConnected)preview.textContent='图片生成失败，请稍后重试';});
   }
   function syncHistoryEditDraft(){
     if(!historyEditDraft)return;
@@ -1554,7 +1620,7 @@
   document.getElementById('modal-close').onclick=closeModal;
   modal.addEventListener('click',e=>{ if(e.target===modal)closeModal(); });
 
-  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.7.2').catch(()=>{}));
+  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.8.1').catch(()=>{}));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&page==='home')renderHome();});
   scheduleDateRefresh();
   render();
