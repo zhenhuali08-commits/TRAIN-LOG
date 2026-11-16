@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.8.2';
+  const VERSION = '3.8.3';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -1508,7 +1508,7 @@
         <div class="workout-overview"><h2><img class="report-glyph" src="./assets/report-icons/03-overview-bars.svg" alt="">训练概览</h2><div class="report-stat"><span>训练时间</span><strong>${durationText(new Date(w.endedAt)-new Date(w.startedAt))}</strong></div><div class="report-stat"><span>有效组</span><strong>${workingSets(w)} 组</strong></div><div class="report-stat"><span>训练容量</span><strong>${Math.round(totalVolume(w)).toLocaleString()} kg</strong></div></div>
         <div class="workout-muscle-panel"><h2><img class="report-glyph" src="./assets/report-icons/04-muscle-target.svg" alt="">肌群分布</h2><div class="workout-muscle-copy"><div><b>主要肌群</b><span data-workout-primary>正在汇总</span></div><div><b>次要肌群</b><span data-workout-secondary>正在汇总</span></div></div><div class="workout-anatomy" data-workout-muscles="${esc(ids)}">肌群图加载中</div></div>
       </div>
-      <div class="report-content-head"><h2><img class="report-content-glyph" src="./assets/report-icons/08-training-content-flex.svg" alt="">训练内容</h2><span><img class="report-glyph" src="./assets/report-icons/09-layer-stack-small.svg" alt="">共 ${(w.exercises||[]).length} 个动作</span></div>
+      <div class="report-content-head"><h2><img class="report-content-glyph" src="./assets/report-icons/training-content.png" alt="">训练内容</h2><span><img class="report-glyph" src="./assets/report-icons/09-layer-stack-small.svg" alt="">共 ${(w.exercises||[]).length} 个动作</span></div>
       <div class="report-exercise-list">${(w.exercises||[]).map(entry=>{const ex=exercise(entry.exerciseId);return `<div class="report-exercise"><div class="exercise-thumb">${exerciseVisual(ex)}</div><div class="report-exercise-copy"><strong>${esc(entry.customName||ex.name)}</strong><small>${esc(setSummary(entry.sets||[],ex)||'暂无已完成组')}</small></div></div>`;}).join('')||'<div class="card empty">这次训练没有动作记录</div>'}</div>
       </div><div class="history-detail-actions report-actions"><button class="secondary-btn" id="share-workout">分享</button><button class="secondary-btn" id="edit-workout">编辑记录</button><button class="secondary-btn danger" id="delete-workout">删除这次训练</button></div>`);
     modal.classList.add('workout-report-mode');
@@ -1522,8 +1522,14 @@
     openModal('分享训练记录',`<div class="share-preview" id="share-preview">正在生成分享图片…</div><div class="share-actions"><button class="primary-btn" id="save-workout-image" disabled>保存图片</button><button class="secondary-btn" id="system-share-workout" disabled>分享到其他应用</button><button class="secondary-btn neutral" id="back-workout-detail">返回记录</button></div><p class="small muted" style="margin-top:12px">系统分享可选择手机中支持图片分享的应用；可用选项由手机系统决定。</p>`);
     document.getElementById('back-workout-detail').onclick=()=>showWorkoutDetail(id);
     const preview=document.getElementById('share-preview'),save=document.getElementById('save-workout-image'),share=document.getElementById('system-share-workout');
-    const entries=(w.exercises||[]).map(entry=>{const ex=exercise(entry.exerciseId),path=GYM_DIRECT[entry.exerciseId]||'';return {name:entry.customName||ex.name,sets:setSummary(entry.sets||[],ex)||'暂无已完成组',imageUrl:path?(path.startsWith('assets/')?`./${path}`:`${GYM_BASE}/${path}`):''};});
-    window.TrainLogMuscleMap.getWorkoutSummary((w.exercises||[]).map(e=>e.exerciseId)).then(summary=>window.TrainLogReportImage.create({name:w.name,date:formatDateTime(w.endedAt),duration:durationText(new Date(w.endedAt)-new Date(w.startedAt)),sets:workingSets(w),volume:Math.round(totalVolume(w)),entries,summary})).then(blob=>{
+    const entriesPromise=Promise.all((w.exercises||[]).map(async entry=>{
+      const ex=exercise(entry.exerciseId),known=GYM_DIRECT[entry.exerciseId]||(NEW_EXERCISE_IDS.has(entry.exerciseId)?'':persistedGymMap[entry.exerciseId])||'';
+      const path=known||(await gymRecord(ex))?.gif_url||'';
+      const rel=String(path).replace(/^\.\//,'');
+      const imageUrls=!rel?[]:/^https?:/.test(rel)?[rel]:rel.startsWith('assets/gym-visual/')?[`./${rel}`]:[`${GYM_BASE}/${rel}`,`https://cdn.statically.io/gh/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`,`https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`];
+      return {name:entry.customName||ex.name,sets:setSummary(entry.sets||[],ex)||'暂无已完成组',imageUrls};
+    }));
+    Promise.all([entriesPromise,window.TrainLogMuscleMap.getWorkoutSummary((w.exercises||[]).map(e=>e.exerciseId))]).then(([entries,summary])=>window.TrainLogReportImage.create({name:w.name,date:formatDateTime(w.endedAt),duration:durationText(new Date(w.endedAt)-new Date(w.startedAt)),sets:workingSets(w),volume:Math.round(totalVolume(w)),entries,summary})).then(blob=>{
       if(!preview.isConnected)return;
       reportPreviewUrl=URL.createObjectURL(blob);preview.innerHTML=`<img src="${reportPreviewUrl}" alt="训练记录分享图片预览">`;
       save.disabled=false;save.onclick=()=>{const link=document.createElement('a');link.href=reportPreviewUrl;link.download=`TRAIN-LOG-${(w.endedAt||'').slice(0,10)}.png`;link.click();};
