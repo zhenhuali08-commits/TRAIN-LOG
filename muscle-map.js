@@ -169,6 +169,9 @@
     svg.setAttribute('xmlns',SVG_NS);
     svg.setAttribute('class','workout-anatomy-svg frozen-anatomy-template');
     svg.setAttribute('aria-label','本次训练肌群分布');
+    // The report uses a closer front/back composition; the approved master stays unchanged.
+    svg.setAttribute('viewBox','20 12 730 710');
+    svg.querySelector('#背面')?.setAttribute('transform','translate(360 0)');
     colorTemplate(svg,{primary:[...primary],secondary:[...secondary]},config);
     return {svg,primary:[...primary].map(label),secondary:[...secondary].map(label)};
   }

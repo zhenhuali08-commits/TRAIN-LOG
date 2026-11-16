@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.8.1';
+  const VERSION = '3.8.2';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -1503,12 +1503,12 @@
     const ids=(w.exercises||[]).map(entry=>entry.exerciseId).filter(Boolean).join(',');
     openModal(w.name,`<div class="workout-report" id="workout-report">
       <div class="report-brand"><span class="report-brand-mark" aria-hidden="true"></span><div><strong>TRAIN LOG</strong><small>私人训练日志</small></div></div>
-      <div class="report-heading"><h1>${esc(w.name)}</h1><time>${formatDateTime(w.endedAt)}</time></div>
+      <div class="report-heading"><h1>${esc(w.name)}</h1><time><img class="report-glyph" src="./assets/report-icons/02-calendar.svg" alt="">${formatDateTime(w.endedAt)}</time></div>
       <div class="workout-summary-card">
-        <div class="workout-overview"><h2>▥ 训练概览</h2><div class="report-stat"><span>训练时间</span><strong>${durationText(new Date(w.endedAt)-new Date(w.startedAt))}</strong></div><div class="report-stat"><span>有效组</span><strong>${workingSets(w)} 组</strong></div><div class="report-stat"><span>训练容量</span><strong>${Math.round(totalVolume(w)).toLocaleString()} kg</strong></div></div>
-        <div class="workout-muscle-panel"><h2>◎ 肌群分布</h2><div class="workout-muscle-copy"><div><b>主要肌群</b><span data-workout-primary>正在汇总</span></div><div><b>次要肌群</b><span data-workout-secondary>正在汇总</span></div></div><div class="workout-anatomy" data-workout-muscles="${esc(ids)}">肌群图加载中</div></div>
+        <div class="workout-overview"><h2><img class="report-glyph" src="./assets/report-icons/03-overview-bars.svg" alt="">训练概览</h2><div class="report-stat"><span>训练时间</span><strong>${durationText(new Date(w.endedAt)-new Date(w.startedAt))}</strong></div><div class="report-stat"><span>有效组</span><strong>${workingSets(w)} 组</strong></div><div class="report-stat"><span>训练容量</span><strong>${Math.round(totalVolume(w)).toLocaleString()} kg</strong></div></div>
+        <div class="workout-muscle-panel"><h2><img class="report-glyph" src="./assets/report-icons/04-muscle-target.svg" alt="">肌群分布</h2><div class="workout-muscle-copy"><div><b>主要肌群</b><span data-workout-primary>正在汇总</span></div><div><b>次要肌群</b><span data-workout-secondary>正在汇总</span></div></div><div class="workout-anatomy" data-workout-muscles="${esc(ids)}">肌群图加载中</div></div>
       </div>
-      <div class="report-content-head"><h2>训练内容</h2><span>共 ${(w.exercises||[]).length} 个动作</span></div>
+      <div class="report-content-head"><h2><img class="report-content-glyph" src="./assets/report-icons/08-training-content-flex.svg" alt="">训练内容</h2><span><img class="report-glyph" src="./assets/report-icons/09-layer-stack-small.svg" alt="">共 ${(w.exercises||[]).length} 个动作</span></div>
       <div class="report-exercise-list">${(w.exercises||[]).map(entry=>{const ex=exercise(entry.exerciseId);return `<div class="report-exercise"><div class="exercise-thumb">${exerciseVisual(ex)}</div><div class="report-exercise-copy"><strong>${esc(entry.customName||ex.name)}</strong><small>${esc(setSummary(entry.sets||[],ex)||'暂无已完成组')}</small></div></div>`;}).join('')||'<div class="card empty">这次训练没有动作记录</div>'}</div>
       </div><div class="history-detail-actions report-actions"><button class="secondary-btn" id="share-workout">分享</button><button class="secondary-btn" id="edit-workout">编辑记录</button><button class="secondary-btn danger" id="delete-workout">删除这次训练</button></div>`);
     modal.classList.add('workout-report-mode');
