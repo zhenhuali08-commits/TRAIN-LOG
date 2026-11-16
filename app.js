@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.7.1';
+  const VERSION = '3.7.2';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -976,8 +976,7 @@
     if(!['body','strength','diet','settings'].includes(dataTab)) dataTab='body';
     const body=lastBody(), avg=sevenDayAvgWeight();
     main.innerHTML=`
-      ${pageIntro('我的','身体数据、力量趋势、饮食推荐和设置。')}
-      <div class="tabs"><button class="tab ${dataTab==='body'?'active':''}" data-mine-tab="body">身体数据</button><button class="tab ${dataTab==='strength'?'active':''}" data-mine-tab="strength">力量趋势</button><button class="tab ${dataTab==='diet'?'active':''}" data-mine-tab="diet">饮食</button><button class="tab ${dataTab==='settings'?'active':''}" data-mine-tab="settings">设置</button></div>
+      ${pageIntro('我的','身体数据、力量趋势、饮食推荐和设置。',`<div class="tabs mine-tabs"><button class="tab ${dataTab==='body'?'active':''}" data-mine-tab="body">身体数据</button><button class="tab ${dataTab==='strength'?'active':''}" data-mine-tab="strength">力量趋势</button><button class="tab ${dataTab==='diet'?'active':''}" data-mine-tab="diet">饮食</button><button class="tab ${dataTab==='settings'?'active':''}" data-mine-tab="settings">设置</button></div>`)}
       <div id="mine-content"></div>`;
     document.querySelectorAll('[data-mine-tab]').forEach(b=>b.onclick=()=>{dataTab=b.dataset.mineTab;renderMine();});
     const c=document.getElementById('mine-content');
@@ -1160,10 +1159,10 @@
   function moveExercise(i,d){const a=state.activeWorkout.exercises,j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];saveState();showReorderExercises();}
   const EXERCISE_GROUPS=['全部','胸','背','肩','腿','臀','二头','三头','腹','小腿','前臂','有氧','拉伸'];
   function openExercisePicker(title,onPick,{onCustom}={}){
-    openModal(title,`${onCustom?'<button class="custom-exercise-entry" id="new-custom-exercise">＋ 自定义动作</button>':''}<div class="search"><input id="shared-ex-search" placeholder="搜索动作"></div><div class="filter-chips" id="shared-ex-groups"></div><div id="shared-ex-list" class="list section"></div>`);
+    openModal(title,`${onCustom?'<button class="custom-exercise-entry" id="new-custom-exercise">＋ 自定义动作</button>':''}<div class="exercise-picker-controls"><div class="search"><input id="shared-ex-search" placeholder="搜索动作"></div><div class="filter-chips" id="shared-ex-groups"></div></div><div id="shared-ex-list" class="list section"></div>`);
     let group='全部';const search=document.getElementById('shared-ex-search'),chips=document.getElementById('shared-ex-groups'),list=document.getElementById('shared-ex-list');
-    const draw=()=>{const q=search.value.trim().toLowerCase();chips.innerHTML=EXERCISE_GROUPS.map(g=>`<button class="chip ${group===g?'active':''}" data-shared-group="${g}">${g}</button>`).join('');list.innerHTML=allExercises().filter(e=>(group==='全部'||e.group===group)&&e.name.toLowerCase().includes(q)).map(e=>`<button class="list-item" style="width:100%;text-align:left" data-shared-pick="${e.id}"><div class="exercise-thumb">${exerciseVisual(e)}</div><div class="grow"><strong>${esc(e.name)}</strong><small>${esc(e.group)} · ${esc(e.equipment||'自定义')}</small></div></button>`).join('')||'<div class="empty">没有找到这个动作</div>';chips.querySelectorAll('[data-shared-group]').forEach(b=>b.onclick=()=>{group=b.dataset.sharedGroup;draw();});list.querySelectorAll('[data-shared-pick]').forEach(b=>b.onclick=()=>onPick(b.dataset.sharedPick));hydrateGymVisuals(list);};
-    search.oninput=draw;if(onCustom)document.getElementById('new-custom-exercise').onclick=onCustom;draw();
+    const draw=()=>{const q=search.value.trim().toLowerCase(),chipScrollLeft=chips.scrollLeft;chips.innerHTML=EXERCISE_GROUPS.map(g=>`<button class="chip ${group===g?'active':''}" data-shared-group="${g}">${g}</button>`).join('');chips.scrollLeft=chipScrollLeft;list.innerHTML=allExercises().filter(e=>(group==='全部'||e.group===group)&&e.name.toLowerCase().includes(q)).map(e=>`<button class="list-item" style="width:100%;text-align:left" data-shared-pick="${e.id}"><div class="exercise-thumb">${exerciseVisual(e)}</div><div class="grow"><strong>${esc(e.name)}</strong><small>${esc(e.group)} · ${esc(e.equipment||'自定义')}</small></div></button>`).join('')||'<div class="empty">没有找到这个动作</div>';chips.querySelectorAll('[data-shared-group]').forEach(b=>b.onclick=()=>{group=b.dataset.sharedGroup;draw();modalSheet.scrollTop=0;});list.querySelectorAll('[data-shared-pick]').forEach(b=>b.onclick=()=>onPick(b.dataset.sharedPick));hydrateGymVisuals(list);};
+    search.oninput=()=>{draw();modalSheet.scrollTop=0;};if(onCustom)document.getElementById('new-custom-exercise').onclick=onCustom;draw();
   }
   function showReplaceExercise(ei){openExercisePicker('替换动作',id=>{state.activeWorkout.exercises[ei].exerciseId=id;saveState();closeModal();renderActiveWorkout();});}
 
@@ -1555,7 +1554,7 @@
   document.getElementById('modal-close').onclick=closeModal;
   modal.addEventListener('click',e=>{ if(e.target===modal)closeModal(); });
 
-  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.7.1').catch(()=>{}));
+  if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.7.2').catch(()=>{}));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&page==='home')renderHome();});
   scheduleDateRefresh();
   render();
