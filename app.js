@@ -2,11 +2,11 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.8.4';
+  const VERSION = '3.8.5';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
-  const THEMES=[['classic','经典蓝','#0B72FE'],['teal','青绿','#018A8D'],['purple','紫色','#7149C2'],['coral','珊瑚橙','#D2653F']];
+  const THEMES=[['classic','经典蓝','#0B72FE'],['teal','青绿','#018A8D'],['purple','紫色','#7149C2'],['coral','珊瑚橙','#D2653F'],['onyx','星耀黑','#171B24']];
 
   const EXERCISES = [
     {id:'bench_press',name:'杠铃卧推',group:'胸',equipment:'杠铃',muscles:['胸','三头','肩'],primary:'胸大肌',secondary:'肱三头肌、三角肌前束',tips:['肩胛骨向后下方收紧并稳定贴住凳面','双脚踩稳地面，保持躯干稳定','杠铃下降至胸部附近后平稳推起，不要弹胸'],mistakes:['肩膀前顶、肩胛失去稳定','手腕过度后折','为了重量牺牲下放控制'],rest:'2–3 分钟'},
@@ -464,11 +464,15 @@
   const modalBody = document.getElementById('modal-body');
   const modalSheet = modal.querySelector('.modal-sheet');
   const toastEl = document.getElementById('toast');
+  document.addEventListener('pointerdown',event=>{
+    if(!event.target.closest('.stats-menu-wrap')){const menu=modalBody.querySelector('#report-metric-menu');if(menu&&!menu.hidden){menu.hidden=true;modalBody.querySelector('#report-metric-trigger')?.setAttribute('aria-expanded','false');}}
+    if(!event.target.closest('.trend-select')){const menu=main.querySelector('.trend-menu');if(menu&&!menu.hidden){menu.hidden=true;main.querySelector('[data-cycle-body-trend]')?.setAttribute('aria-expanded','false');}}
+  });
 
   function uid(){ return (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`); }
   function today(){ return new Date().toISOString().slice(0,10); }
   function esc(v=''){ return String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
-  function applyTheme(){const theme=THEMES.some(([id])=>id===state.settings?.theme)?state.settings.theme:'classic';document.documentElement.dataset.theme=theme;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',({classic:'#e8f3ff',teal:'#e9f8f5',purple:'#f3effb',coral:'#fff2eb'})[theme]);}
+  function applyTheme(){const theme=THEMES.some(([id])=>id===state.settings?.theme)?state.settings.theme:'classic';document.documentElement.dataset.theme=theme;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',({classic:'#e8f3ff',teal:'#e9f8f5',purple:'#f3effb',coral:'#fff2eb',onyx:'#171b24'})[theme]);}
   function themeSettingsHTML(){return `<section class="section"><div class="card"><div class="section-title">主题颜色</div><div class="theme-grid">${THEMES.map(([id,label,color])=>`<button class="theme-choice ${state.settings.theme===id?'active':''}" data-theme-option="${id}" aria-pressed="${state.settings.theme===id}"><i style="--swatch:${color}"></i><span>${label}</span></button>`).join('')}</div></div></section>`;}
   function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
   function num(v){ const n=parseFloat(v); return Number.isFinite(n)?n:null; }
@@ -936,7 +940,7 @@
     if(period==='day'){const blanks=Array.from({length:offset},()=>'<span></span>').join(''),days=Array.from({length:last},(_,i)=>{const key=localDateKey(new Date(year,month,i+1));return `<button type="button" ${available.has(key)?`data-report-choice="${key}"`:'disabled'} class="${key===selected?'active':''}">${i+1}</button>`;}).join('');return `<div class="stats-picker-panel">${controls}${weekdays}<div class="stats-picker-grid days">${blanks}${days}</div></div>`;}
     const firstMonday=startOfWeek(first),weeks=[],trainedDates=new Set(state.workouts.filter(w=>w.endedAt).map(w=>localDateKey(w.endedAt)));for(let i=0;i<6;i++){const monday=new Date(firstMonday);monday.setDate(monday.getDate()+i*7);if(monday>=new Date(year,month+1,1))break;const key=localDateKey(monday),sunday=new Date(monday);sunday.setDate(sunday.getDate()+6);weeks.push(`<button type="button" class="stats-week-option ${key===selected?'active':''}" ${available.has(key)?`data-report-choice="${key}"`:'disabled'}><span>${monday.getMonth()+1}/${monday.getDate()}—${sunday.getMonth()+1}/${sunday.getDate()}</span><span class="stats-week-dots">${Array.from({length:7},(_,d)=>{const date=new Date(monday);date.setDate(date.getDate()+d);return `<i class="${trainedDates.has(localDateKey(date))?'trained':''}"></i>`;}).join('')}</span></button>`);}return `<div class="stats-picker-panel">${controls}${weekdays}<div class="stats-week-list">${weeks.join('')}</div></div>`;
   }
-  function reportBodyHTML(r){const fields=[['height','身高','cm'],['bodyFat','体脂率','%'],['skeletalMuscle','骨骼肌','kg'],['waist','腰围','cm']],all=[...state.bodyMetrics].filter(m=>m.date).sort((a,b)=>new Date(a.date)-new Date(b.date));return `<section class="stats-body-card"><h3>身体变化</h3>${fields.map(([key,label,unit])=>{const before=all.filter(m=>new Date(`${m.date}T12:00:00`)<r.start&&num(m[key])!==null).at(-1),within=all.filter(m=>{const d=new Date(`${m.date}T12:00:00`);return d>=r.start&&d<=r.end&&num(m[key])!==null;}),points=within.length?[...(before?[before]:[]),...within]:[],first=points[0],last=points.at(-1),values=points.map(p=>Number(p[key])),min=Math.min(...values),max=Math.max(...values),spark=values.length>1?`<svg viewBox="0 0 90 28" aria-label="${label}趋势"><polyline points="${values.map((v,i)=>`${3+i*84/(values.length-1)},${24-(v-min)/Math.max(1,max-min)*20}`).join(' ')}"/></svg>`:'',display=last?`${first&&first!==last?`${num(first[key])} → `:''}${num(last[key])} ${unit}`:key==='height'&&num(state.profile.height)!==null?`档案 ${num(state.profile.height)} ${unit}`:'暂无记录';return `<div class="stats-body-row"><div><span>${label}</span><small>${within.length} 次记录</small></div>${spark}<strong>${display}</strong></div>`;}).join('')}</section>`;}
+  function reportBodyHTML(r){const fields=[['weight','体重','kg'],['bodyFat','体脂率','%'],['skeletalMuscle','骨骼肌','kg'],['waist','腰围','cm']],all=[...state.bodyMetrics].filter(m=>m.date).sort((a,b)=>new Date(a.date)-new Date(b.date));return `<section class="stats-body-card"><h3>身体变化</h3>${fields.map(([key,label,unit])=>{const before=all.filter(m=>new Date(`${m.date}T12:00:00`)<r.start&&num(m[key])!==null).at(-1),within=all.filter(m=>{const d=new Date(`${m.date}T12:00:00`);return d>=r.start&&d<=r.end&&num(m[key])!==null;}),points=within.length?[...(before?[before]:[]),...within]:[],first=points[0],last=points.at(-1),values=points.map(p=>Number(p[key])),min=Math.min(...values),max=Math.max(...values),spark=values.length>1?`<svg viewBox="0 0 90 28" aria-label="${label}趋势"><polyline points="${values.map((v,i)=>`${3+i*84/(values.length-1)},${24-(v-min)/Math.max(1,max-min)*20}`).join(' ')}"/></svg>`:'',display=last?`${first&&first!==last?`${num(first[key])} → `:''}${num(last[key])} ${unit}`:key==='height'&&num(state.profile.height)!==null?`档案 ${num(state.profile.height)} ${unit}`:'暂无记录';return `<div class="stats-body-row"><div><span>${label}</span><small>${within.length} 次记录</small></div>${spark}<strong>${display}</strong></div>`;}).join('')}</section>`;}
   function reportPerformanceHTML(r){const prefix={day:'本日',week:'本周',month:'本月',year:'本年'}[r.period],top=r.topExercise?exercise(r.topExercise[0]):null;return `<section class="stats-performance-card"><h3>动作表现</h3><div class="stats-performance-top"><span>${prefix}训练最多</span>${top?`<div class="stats-performance-thumb">${exerciseVisual(top)}</div><strong>${esc(top.name)} ${r.topExercise[1]} 次</strong>`:'<strong>暂无训练</strong>'}</div><div class="stats-performance-subtitle">${prefix}进步训练</div>${r.progress.length?r.progress.map(x=>`<div class="stats-performance-row"><div class="stats-performance-thumb">${exerciseVisual(exercise(x.id))}</div><div><strong>${esc(x.name)}</strong><small>${x.from} → ${x.to} kg</small></div><b>+${x.pct}%</b></div>`).join(''):'<div class="report-empty">当前周期还没有可比较的力量进步</div>'}<div class="stats-record-title"><span>新纪录</span><strong>${r.records.length} 项</strong></div>${r.records.slice(0,4).map(x=>`<div class="stats-performance-row"><div class="stats-performance-thumb">${exerciseVisual(exercise(x.id))}</div><div><strong>${esc(x.name)}</strong><small>${x.before?`${x.before} → `:''}${x.inside} kg</small></div><b>新高</b></div>`).join('')}</section>`;}
   let reportMappingsPromise=null;
   async function renderStatsMuscles(r,host){if(!host)return;if(!r.history.length){host.innerHTML='<div class="report-empty">该周期暂无训练，暂不能生成肌群分布</div>';return;}try{
@@ -978,6 +982,8 @@
   }
 
   function renderActiveWorkout(){
+    const retained=new Map([...main.querySelectorAll('.training-exercise')].map(section=>[`${section.dataset.exIndex}:${section.querySelector('img.gym-gif')?.dataset.gymId}`,section.querySelector('img.gym-gif')]).filter(([,img])=>img));
+    retained.forEach(img=>{gymVisibilityObserver?.unobserve(img);if(img._gymSuspendTimer){clearTimeout(img._gymSuspendTimer);img._gymSuspendTimer=null;}});
     const w=state.activeWorkout; const elapsed=Date.now()-new Date(w.startedAt).getTime();
     main.innerHTML=`
       <div class="workout-head">
@@ -988,7 +994,9 @@
       <button class="primary-btn" id="finish-workout-btn">完成训练</button>
       ${restRemaining>0?timerHTML():''}
     `;
+    main.querySelectorAll('.training-exercise').forEach(section=>{const fresh=section.querySelector('img.gym-gif'),old=fresh&&retained.get(`${section.dataset.exIndex}:${fresh.dataset.gymId}`);if(!old)return;fresh.replaceWith(old);const shell=old.closest('.gym-media-shell');if(old.complete&&old.naturalWidth)shell?.classList.add('loaded');if(old.dataset.hydrated)gymVisibilityObserver?.observe(old);});
     bindActiveWorkout();
+    requestAnimationFrame(()=>hydrateGymVisuals(main));
     clearInterval(timerInterval); timerInterval=setInterval(()=>{ const el=document.getElementById('elapsed'); if(el)el.textContent=durationText(Date.now()-new Date(w.startedAt).getTime()); },30000);
   }
 
@@ -1149,14 +1157,15 @@
   function exerciseLibraryHTML(searchQuery=''){
     const q=searchQuery.trim().toLowerCase();
     const list=allExercises().filter(e=>(activeExerciseFilter==='全部'||e.group===activeExerciseFilter)&&e.name.toLowerCase().includes(q));
-    return `<div class="section"><div id="exercise-list" class="list">${list.map(exerciseListItem).join('')||'<div class="empty">没有找到这个动作</div>'}</div></div>`;
+    return `<div class="section"><div id="exercise-list" class="list">${groupedExerciseLibraryHTML(list)}</div></div>`;
   }
+  function groupedExerciseLibraryHTML(list){if(!list.length)return '<div class="empty">没有找到这个动作</div>';return EXERCISE_GROUPS.filter(g=>g!=='全部').map(g=>{const items=list.filter(e=>e.group===g);return items.length?`<div class="exercise-group-heading">${g==='胸'?'胸部':g==='背'?'背部':g==='肩'?'肩部':g==='腿'?'腿部':g==='臀'?'臀部':g==='腹'?'腹部':g==='二头'?'肱二头':g==='三头'?'肱三头':g} · ${items.length} 个动作</div>${items.map(exerciseListItem).join('')}`:'';}).join('');}
   function exerciseListItem(e){ return `<button class="list-item tutorial-card" style="width:100%;text-align:left" data-tutorial="${e.id}"><div class="muscle-icon visual">${exerciseVisual(e)}</div><div class="grow"><strong>${esc(e.name)}</strong><p>${esc(e.primary)} · ${esc(e.equipment)}${e.type==='cardio'?' · min':''}</p></div><span class="pill blue">讲解</span></button>`; }
   function bindExerciseLibrary(){
     document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const chipScrollLeft=b.parentElement.scrollLeft;const searchQuery=document.getElementById('exercise-search')?.value||'';activeExerciseFilter=b.dataset.filter;renderExercisesPage(chipScrollLeft,searchQuery);});
     document.querySelectorAll('[data-tutorial]').forEach(b=>b.onclick=()=>showTutorial(b.dataset.tutorial));
     const list=document.getElementById('exercise-list');hydrateGymVisuals(list);
-    const s=document.getElementById('exercise-search'); if(s)s.oninput=()=>{ const q=s.value.trim().toLowerCase(); list.innerHTML=allExercises().filter(e=>(activeExerciseFilter==='全部'||e.group===activeExerciseFilter)&&e.name.toLowerCase().includes(q)).map(exerciseListItem).join('')||'<div class="empty">没有找到这个动作</div>'; document.querySelectorAll('[data-tutorial]').forEach(b=>b.onclick=()=>showTutorial(b.dataset.tutorial)); hydrateGymVisuals(list); };
+    const s=document.getElementById('exercise-search'); if(s)s.oninput=()=>{ const q=s.value.trim().toLowerCase(); list.innerHTML=groupedExerciseLibraryHTML(allExercises().filter(e=>(activeExerciseFilter==='全部'||e.group===activeExerciseFilter)&&e.name.toLowerCase().includes(q))); document.querySelectorAll('[data-tutorial]').forEach(b=>b.onclick=()=>showTutorial(b.dataset.tutorial)); hydrateGymVisuals(list); };
   }
 
   function bindCommon(){
@@ -1606,11 +1615,11 @@
 
   function showBodyForm(id=null){
     const current=id?state.bodyMetrics.find(x=>x.id===id):null,value=(key)=>esc(current?.[key]??'');
-    openModal(current?'编辑身体记录':'记录身体数据',`<div class="form-grid"><div class="field full"><label>日期</label><input id="body-date" type="date" value="${current?.date||localDateKey()}"></div><div class="field"><label>体重 kg</label><input id="body-weight" type="number" inputmode="decimal" min="20" max="300" step="0.1" value="${value('weight')}"></div><div class="field"><label>体脂率 %</label><input id="body-fat" type="number" inputmode="decimal" min="1" max="70" step="0.1" value="${value('bodyFat')}"></div><div class="field"><label>身高 cm（可选）</label><input id="body-height" type="number" inputmode="decimal" min="100" max="230" step="0.1" value="${value('height')}"></div><div class="field"><label>腰围 cm</label><input id="body-waist" type="number" inputmode="decimal" min="30" max="250" step="0.1" value="${value('waist')}"></div><div class="field"><label>骨骼肌 kg</label><input id="body-muscle" type="number" inputmode="decimal" min="5" max="100" step="0.1" value="${value('skeletalMuscle')}"></div></div><div class="body-form-actions"><button class="primary-btn" id="save-body">保存记录</button>${current?'<button class="secondary-btn danger" id="delete-body">删除记录</button>':''}</div>`);
+    openModal(current?'编辑身体记录':'记录身体数据',`<div class="form-grid"><div class="field full"><label>日期</label><input id="body-date" type="date" value="${current?.date||localDateKey()}"></div><div class="field"><label>体重 kg</label><input id="body-weight" type="number" inputmode="decimal" min="20" max="300" step="0.1" value="${value('weight')}"></div><div class="field"><label>体脂率 %</label><input id="body-fat" type="number" inputmode="decimal" min="1" max="70" step="0.1" value="${value('bodyFat')}"></div><div class="field"><label>腰围 cm</label><input id="body-waist" type="number" inputmode="decimal" min="30" max="250" step="0.1" value="${value('waist')}"></div><div class="field"><label>骨骼肌 kg</label><input id="body-muscle" type="number" inputmode="decimal" min="5" max="100" step="0.1" value="${value('skeletalMuscle')}"></div></div><div class="body-form-actions"><button class="primary-btn" id="save-body">保存记录</button>${current?'<button class="secondary-btn danger" id="delete-body">删除记录</button>':''}</div>`);
     document.getElementById('save-body').onclick=()=>{
-      const date=document.getElementById('body-date').value||localDateKey(),weight=num(document.getElementById('body-weight').value),bodyFat=num(document.getElementById('body-fat').value),height=num(document.getElementById('body-height').value),waist=num(document.getElementById('body-waist').value),skeletalMuscle=num(document.getElementById('body-muscle').value);
-      if(weight===null&&bodyFat===null&&height===null&&waist===null&&skeletalMuscle===null){toast('至少填写一项身体数据');return;}
-      const row={...(current||{}),id:current?.id||uid(),date,weight,bodyFat,height,waist,skeletalMuscle};
+      const date=document.getElementById('body-date').value||localDateKey(),weight=num(document.getElementById('body-weight').value),bodyFat=num(document.getElementById('body-fat').value),waist=num(document.getElementById('body-waist').value),skeletalMuscle=num(document.getElementById('body-muscle').value);
+      if(weight===null&&bodyFat===null&&waist===null&&skeletalMuscle===null){toast('至少填写一项身体数据');return;}
+      const row={...(current||{}),id:current?.id||uid(),date,weight,bodyFat,waist,skeletalMuscle};
       state.bodyMetrics=current?state.bodyMetrics.map(x=>x.id===current.id?row:x):[...state.bodyMetrics,row];
       saveState();closeModal();render();toast(current?'身体记录已更新':'身体数据已记录');
     };
