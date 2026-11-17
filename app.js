@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.8.7';
+  const VERSION = '3.8.8';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -397,7 +397,7 @@
   Object.assign(VIDEO_MAP,window.TRAIN_LOG_NEW_VIDEOS||{});
   const BILIBILI_COVER_BASE='https://i0.hdslb.com/bfs/archive/';
   const BILIBILI_COVERS={lateral_raise:'fef5a5187b709d76692502190efda94b20fc37b4.jpg',bench_press:'f8bda2da2822225ade65d47a60eb4768c9f42e90.jpg',pec_deck:'34bc75e751b7b297aa59581f63d4a6189b24e316.jpg',cable_row:'ef0a041b1a04cad8294eecefa45ea6e4a982c600.jpg',reverse_pec_deck:'91843880fa34c9b593e32e2eebb17b6d03197be6.jpg',machine_row:'2f3adfd6b5eb9edce229933b32e432534b597da6.jpg',cable_fly:'4c2dab4209f276d07bf4ecbac87f648b05616525.jpg',pullup:'4508edea441b4b6c4caceb63f1ae9690120097ce.jpg',calf_raise:'80185cb7cde43c8d42d9e2c905301f809c3fecab.jpg',bulgarian_split_squat:'ea3ab0170f0ea7017f42760b13a03f5d1de84bb1.jpg',lat_pulldown:'4a68d20bbc774ccee2b2ae8d9627c822739a5f45.jpg',hack_squat:'402cf2265b67dd8a49c605c92cdc38153547b6a3.jpg',tbar_row:'b6865253315ab916d854316cf1a9d25dce6af3fe.jpg',chest_dip:'7b7eaec3b514fe67974d01f344bddf5cba353eba.jpg',barbell_shoulder_press:'12d998578cf5c0752d119fb91a875bd6c5a19309.jpg',front_raise:'19711bc78ee58e65949dc12fe7da68d4e94d232f.jpg',flat_db_press:'b5aaa6250bae92fd0c86cb954a4d33a8ae74121c.jpg',smith_shoulder_press:'0cf948b02785fc957f8e8205cfd40c3fad2b93f6.jpg',biceps_curl:'786ff8839cdc1448bbfe167762ccd48e8e3d7b48.jpg',hanging_leg_raise:'0a6fe2b1601df365ae2f9898ebc9cca9848acd07.jpg',incline_db_press:'6a41da7c7446a2b10bc55da1654bcc9d10830292.jpg',overhead_triceps:'1d4094d0553056a88c883fb726143fdc571aa11f.jpg',face_pull:'4f1344bbf04f539f423c9637f4c3ed93d0267a0f.jpg',incline_machine_press:'8432de217d440bfba1bbc4c3885ccba4af8f9810.jpg',leg_curl:'a79e3726a8358f992f356ee64932b1931bc63990.jpg',triceps_pushdown:'6db4e40dfa340a3801e3f8047e718f6f33c7b590.jpg',barbell_curl:'9e6c81f8f9ee37f317d754722de942c7f8a39bb8.jpg',incline_press_any:'e9834cbad16cc41b114d240324c5c3f189413e40.jpg',reverse_fly:'37dfde7d25f622f0daf69050a5750f8cd35361f7.jpg',stair_climber:'871640d4a208f088e3148c43673d77a0b73ef04a.jpg',triceps_pressdown:'6db4e40dfa340a3801e3f8047e718f6f33c7b590.jpg',weighted_russian_twist:'7912a03a3dcab3e355582cea5e61662d5b91292c.jpg',skull_crusher:'6cfc45274619b7d956e34504520f4416c69b9667.jpg',incline_walk:'5bea29f5eb42f17daa99502f05bdf5be293ef183.jpg',single_arm_pushdown:'eda1f6d139ad22c07af28428a5e04f77cffc40d2.jpg',upright_row:'906198d2c7a9320fec4280ae6c9c32963b565747.png',decline_press:'fbf76c2cb1dda1777118471b92e9766723c93a91.jpg',cable_crunch:'cd353bc561ebb57b36ae797eee651e34afd7b2b7.jpg',preacher_curl:'d5a43d3c6689abbdf0bdc92eb7ea2153c420835c.jpg',stationary_bike:'11d85fdef99962c8f7bf28d34250eecfeacfd0fb.jpg',leg_extension:'a5a2683d1010a615b602fd4b705cfef0c28a1489.jpg',one_arm_db_row:'77d07529bcc516116500429bf930b3b4205b9263.jpg',hammer_curl:'bd28c2ef1771dd32f1707b7703dfc82e81b9d9b4.jpg',reverse_hack_squat:'4a1f744380cbd200366563c319bc5fe4072417f9.jpg',crunch_combo:'9fc51b4f708d06e83558340c55600fae085c77fd.jpg',shrug:'a93cad94de9c610d5584e7fdd861b6995c42527c.png',lying_leg_raise:'90861388f6c342a071dfe1d78d520e09091b0c52.jpg',arnold_press:'b8cf15422fcd696bb4920d68a6d4545a6fbf6d62.jpg',elliptical:'f345bb1d2dda0a88768715ce6ebe2e58afbe8d0d.jpg',butterfly_crunch:'fcebc0b97a3180341c0d12071d5df161d4e375c1.jpg',pulldown_any:'4a68d20bbc774ccee2b2ae8d9627c822739a5f45.jpg',barbell_row:'3087ee9d1339543e04a8007a28914155fb5d5064.jpg',treadmill_run:'ad527dd78e0451213784d2dbdd733c708b8cdaaa.jpg',back_squat:'c0385d00ba1e97569d81a104ca1535668b9ffe08.jpg',bench_dip:'7e9fa030a452b627878a898f09eabc52ea02f2e9.jpg',machine_press:'db7fa1cd33d863b53c25feb5f238822ae6b4943f.jpg',machine_crunch:'68bcd88d1ae4001423b3821c713d0f054d0056ce.jpg',incline_twist_crunch:'77a28b9e3c7f3a3586d866d45641b3efa8b373d5.jpg',assisted_pullup:'e3e0edb952bf000a2977c5475e0c04495364bfad.jpg',rdl:'0f64d22d1d526b544ffc71f093b26d2e9ab16e28.jpg',wrist_curl:'avsas_i181030txjplqpkcl58q31d7kv9827kk_0004.jpg',sit_up:'92903114f8c4bdd7362750194fcd0133ffa634d9.jpg',cable_curl:'8bed1eadfd7075b2c86d7bdb102c03ed66259097.jpg',db_shoulder_press:'8dd14ef399ef6a25c39c5c23fdd80cc02b034bb9.jpg',leg_raise:'80daefc1b4dc65837e082a5a95cca89182d47bcc.jpg',leg_press:'187f4aa21c9bdb02d571a4f4aa2ef9fc2a75e213.jpg',triceps_rope_overhead:'1d4094d0553056a88c883fb726143fdc571aa11f.jpg',deadlift:'8975647ceb5c35a79afd23622687efa0b804549a.jpg',goblet_squat:'b66a52125f947a4ce7f81ee478bc5434b012f253.jpg',hammer_one_arm_row:'e68e53afab1a507378df4054738686ef6e8d58ef.jpg',plank:'0da2378d19743b5b62752c47131a880c65ad401b.jpg',triceps_kickback:'094d4162db4484b23aebabaac432fac9490224e4.jpg',close_grip_bench:'f3adc2c30afa17dfe126933b257c121bcf8cabb3.jpg'};
-  let gymIndexPromise=null; const gymCache={}; let gymVisibilityObserver=null;
+  let gymIndexPromise=null; const gymCache={};
   const DIET = {
     training:{label:'训练日',kcal:2400,protein:150,fat:65,carbs:300},
     rest:{label:'休息日',kcal:2200,protein:150,fat:70,carbs:240},
@@ -590,7 +590,7 @@
     resetModalScroll();
     requestAnimationFrame(()=>{resetModalScroll();hydrateGymVisuals(modalBody);});
   }
-  function closeModal(){ cleanupTutorialMedia();modal.classList.remove('tutorial-mode'); if(modal.open)modal.close(); if(pendingFreeWorkout && state.activeWorkout?.planId===null && !(state.activeWorkout.exercises||[]).length){state.activeWorkout=null;pendingFreeWorkout=false;saveState();if(page==='training')renderTraining();} requestAnimationFrame(()=>hydrateGymVisuals(main,{force:true})); }
+  function closeModal(){ cleanupTutorialMedia();modal.classList.remove('tutorial-mode'); if(modal.open)modal.close(); if(pendingFreeWorkout && state.activeWorkout?.planId===null && !(state.activeWorkout.exercises||[]).length){state.activeWorkout=null;pendingFreeWorkout=false;saveState();if(page==='training')renderTraining();} }
 
   function setPage(next){ page=next; document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page)); render(); window.scrollTo({top:0,behavior:'instant'}); }
 
@@ -947,10 +947,15 @@
     reportMappingsPromise ||= fetch('./exercise-muscle-mappings.json?v=3.6.2',{cache:'force-cache'}).then(response=>{if(!response.ok)throw new Error('肌群映射加载失败');return response.json();}).catch(error=>{reportMappingsPromise=null;throw error;});
     const entries=r.history.flatMap(w=>(w.exercises||[]).map(entry=>({id:entry.exerciseId,sets:(entry.sets||[]).filter(s=>s.done&&!s.warmup).length}))).filter(entry=>entry.sets>0),ids=[...new Set(entries.map(entry=>entry.id))];
     const [mapping,summary]=await Promise.all([reportMappingsPromise,window.TrainLogMuscleMap.getWorkoutSummary(ids)]);if(!host.isConnected)return;
-    const scores={},categories=[['胸部',['chest','upper_chest','lower_chest']],['背部',['lats','rhomboids','upper_trapezius','middle_lower_trapezius','erector_spinae']],['臀腿',['glutes','quads','hamstrings','adductors','hip_flexors']],['肩部',['anterior_deltoids','lateral_deltoids','rear_deltoids','rotator_cuff']],['手臂',['biceps','triceps','forearms']],['核心',['rectus_abdominis','obliques']],['小腿',['calves']]],categoryCounts=Object.fromEntries(categories.map(([name])=>[name,0]));
-    entries.forEach(({id,sets})=>{const item=mapping.exercises[id];if(!item)return;const primary=item.primary||[],secondary=item.secondary||[];primary.forEach(region=>scores[region]=(scores[region]||0)+sets);secondary.forEach(region=>scores[region]=(scores[region]||0)+sets*.5);categories.forEach(([name,regions])=>{if(regions.some(region=>primary.includes(region)||secondary.includes(region)))categoryCounts[name]+=sets;});});
+    const scores={},regionCounts={},categories=[['胸部',['chest','upper_chest','lower_chest']],['背部',['lats','rhomboids','upper_trapezius','middle_lower_trapezius','erector_spinae']],['臀腿',['glutes','quads','hamstrings','adductors','hip_flexors']],['肩部',['anterior_deltoids','lateral_deltoids','rear_deltoids','rotator_cuff']],['手臂',['biceps','triceps','forearms']],['核心',['rectus_abdominis','obliques']],['小腿',['calves']]],categoryCounts=Object.fromEntries(categories.map(([name])=>[name,0]));
+    entries.forEach(({id,sets})=>{const item=mapping.exercises[id];if(!item)return;const primary=item.primary||[],secondary=item.secondary||[];primary.forEach(region=>scores[region]=(scores[region]||0)+sets);secondary.forEach(region=>scores[region]=(scores[region]||0)+sets*.5);new Set([...primary,...secondary]).forEach(region=>regionCounts[region]=(regionCounts[region]||0)+sets);categories.forEach(([name,regions])=>{if(regions.some(region=>primary.includes(region)||secondary.includes(region)))categoryCounts[name]+=sets;});});
     const svg=summary.svg,max=Math.max(0,...Object.values(scores)),steps=['#fee2e2','#fecaca','#fca5a5','#fb7185','#f43f5e','#dc2626'],pathScores={};svg.setAttribute('aria-label','本周期肌群训练量分布');svg.querySelectorAll('path.muscle-block').forEach(path=>path.style.fill=mapping.colors.inactive);Object.entries(scores).forEach(([region,score])=>(mapping.regions[region]?.paths||[]).forEach(pathId=>pathScores[pathId]=Math.max(pathScores[pathId]||0,score)));Object.entries(pathScores).forEach(([pathId,score])=>{const path=svg.getElementById(pathId);if(path)path.style.fill=steps[Math.min(steps.length-1,Math.max(0,Math.ceil(score/max*steps.length)-1))];});
-    host.innerHTML='<div class="stats-anatomy"></div><div class="stats-heat-legend"><span>未训练</span><i></i>'+steps.map(color=>`<i style="background:${color}"></i>`).join('')+'<span>多</span></div><div class="stats-muscle-groups"></div>';host.querySelector('.stats-anatomy').appendChild(svg);host.querySelector('.stats-muscle-groups').innerHTML=categories.map(([name])=>`<div><strong>${name}</strong><small>${categoryCounts[name]?`${categoryCounts[name]} 组`:'未训练'}</small><i style="width:${max?Math.min(100,categoryCounts[name]/Math.max(1,Math.max(...Object.values(categoryCounts)))*100):0}%"></i></div>`).join('');
+    host.innerHTML='<div class="stats-anatomy"></div><div class="stats-heat-legend"><span>未训练</span><i></i>'+steps.map(color=>`<i style="background:${color}"></i>`).join('')+'<span>多</span></div><div class="stats-muscle-detail"></div>';host.querySelector('.stats-anatomy').appendChild(svg);
+    const detail=host.querySelector('.stats-muscle-detail'),maxCategory=Math.max(1,...Object.values(categoryCounts));
+    const showGroups=()=>{detail.innerHTML=`<div class="stats-muscle-groups">${categories.map(([name],index)=>`<button type="button" data-stats-muscle-group="${index}" aria-label="查看${name}各肌肉组数"><strong>${name}</strong><small>${categoryCounts[name]?`${categoryCounts[name]} 组`:'未训练'}</small><i style="width:${categoryCounts[name]/maxCategory*100}%"></i></button>`).join('')}</div>`;detail.querySelectorAll('[data-stats-muscle-group]').forEach(button=>button.onclick=()=>showGroup(Number(button.dataset.statsMuscleGroup)));};
+    const showGroup=index=>{const [name,regions]=categories[index],maxRegion=Math.max(1,...regions.map(region=>regionCounts[region]||0));detail.innerHTML=`<div class="stats-muscle-detail-head"><button type="button" class="stats-muscle-back" aria-label="返回肌群分类">返回</button><strong>${name}</strong><small>${categoryCounts[name]?`${categoryCounts[name]} 组`:'未训练'}</small></div><div class="stats-muscle-region-list">${regions.map(region=>{const count=regionCounts[region]||0;return `<div class="stats-muscle-region"><div><strong>${esc(mapping.regions[region]?.label||region)}</strong><span>${count?`${count} 组`:'未训练'}</span></div><i><b style="width:${count/maxRegion*100}%"></b></i></div>`;}).join('')}</div>`;detail.querySelector('.stats-muscle-back').onclick=showGroups;};
+    const pathCategories=new Map();categories.forEach(([,regions],index)=>regions.forEach(region=>(mapping.regions[region]?.paths||[]).forEach(pathId=>{if(!pathCategories.has(pathId))pathCategories.set(pathId,index);})));svg.querySelectorAll('path.muscle-block').forEach(path=>{if(pathCategories.has(path.id))path.style.cursor='pointer';});svg.addEventListener('click',event=>{const path=event.target.closest?.('path.muscle-block'),index=path&&pathCategories.get(path.id);if(index!==undefined&&index!==null)showGroup(index);});
+    showGroups();
   }catch(error){console.warn('[TRAIN LOG] 统计肌群图:',error);if(host.isConnected)host.innerHTML='<div class="report-empty">肌群图暂时无法加载</div>';}}
   function showRecordStats(period=recordReportPeriod){
     if(!showRecordStats.started){recordReportAnchor=new Date(latestWorkout()?.endedAt||Date.now());showRecordStats.started=true;}
@@ -983,7 +988,6 @@
 
   function renderActiveWorkout(){
     const retained=new Map([...main.querySelectorAll('.training-exercise')].map(section=>[`${section.dataset.exIndex}:${section.querySelector('img.gym-gif')?.dataset.gymId}`,section.querySelector('img.gym-gif')]).filter(([,img])=>img));
-    retained.forEach(img=>{gymVisibilityObserver?.unobserve(img);if(img._gymSuspendTimer){clearTimeout(img._gymSuspendTimer);img._gymSuspendTimer=null;}});
     const w=state.activeWorkout; const elapsed=Date.now()-new Date(w.startedAt).getTime();
     main.innerHTML=`
       <div class="workout-head">
@@ -994,7 +998,7 @@
       <button class="primary-btn" id="finish-workout-btn">完成训练</button>
       ${restRemaining>0?timerHTML():''}
     `;
-    main.querySelectorAll('.training-exercise').forEach(section=>{const fresh=section.querySelector('img.gym-gif'),old=fresh&&retained.get(`${section.dataset.exIndex}:${fresh.dataset.gymId}`);if(!old)return;fresh.replaceWith(old);const shell=old.closest('.gym-media-shell');if(old.complete&&old.naturalWidth)shell?.classList.add('loaded');if(old.dataset.hydrated)gymVisibilityObserver?.observe(old);});
+    main.querySelectorAll('.training-exercise').forEach(section=>{const fresh=section.querySelector('img.gym-gif'),old=fresh&&retained.get(`${section.dataset.exIndex}:${fresh.dataset.gymId}`);if(!old)return;fresh.replaceWith(old);const shell=old.closest('.gym-media-shell');if(old.complete&&old.naturalWidth)shell?.classList.add('loaded');});
     bindActiveWorkout();
     requestAnimationFrame(()=>hydrateGymVisuals(main));
     clearInterval(timerInterval); timerInterval=setInterval(()=>{ const el=document.getElementById('elapsed'); if(el)el.textContent=durationText(Date.now()-new Date(w.startedAt).getTime()); },30000);
@@ -1318,10 +1322,19 @@
   function movePlanExercise(p,i,d){const j=i+d;if(j<0||j>=p.exercises.length)return;[p.exercises[i],p.exercises[j]]=[p.exercises[j],p.exercises[i]];saveState();showPlan(p.id);}
   function showPlanExercisePicker(p,mode,index=null){openExercisePicker(mode==='add'?'添加动作':'替换动作',id=>{if(mode==='add')p.exercises.push([id,1,8,12]);else{const old=p.exercises[index];p.exercises[index]=[id,old[1],old[2],old[3]];}saveState();showPlan(p.id);});}
 
+  const GYM_LOCAL_ORIGINALS=new Set([...Object.values(GYM_DIRECT),...Object.values(GYM_GROUP_FALLBACK)].filter(path=>path.startsWith('videos/')));
+  function gymSources(path){
+    const rel=String(path||'').replace(/^\.\//,'');if(!rel)return [];
+    if(/^https?:/.test(rel))return [rel];
+    if(rel.startsWith('assets/gym-visual/'))return [`./${rel}`,`./${rel}?retry=1`];
+    const remote=[`${GYM_BASE}/${rel}`,`https://cdn.statically.io/gh/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`,`https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`];
+    return GYM_LOCAL_ORIGINALS.has(rel)?[`./assets/gym-visual/original/${rel.slice(7)}`,...remote]:remote;
+  }
   function exerciseVisual(ex,{priority=false}={}){
     const path=GYM_DIRECT[ex.id]||(NEW_EXERCISE_IDS.has(ex.id)?'':persistedGymMap[ex.id])||'';
     if(NEW_EXERCISE_IDS.has(ex.id)&&!path)return `<div class="gym-media-shell gym-media-pending"><span class="gym-loading">动图待补充</span></div>`;
-    return `<div class="gym-media-shell${priority?' priority':''}"><img class="gym-gif" data-gym-id="${ex.id}" data-gym-path="${esc(path)}" data-gym-priority="${priority?'1':'0'}" alt="${esc(ex.name)}" loading="${priority?'eager':'lazy'}" decoding="async" ${priority?'fetchpriority="high"':''} draggable="false"><span class="gym-loading">动作加载中</span>${ex.mediaNote?'<span class="gym-approx-label">示意</span>':''}</div>`;
+    const source=gymSources(path)[0]||'';
+    return `<div class="gym-media-shell${priority?' priority':''}"><img class="gym-gif" data-gym-id="${ex.id}" data-gym-path="${esc(path)}" data-gym-priority="${priority?'1':'0'}" alt="${esc(ex.name)}" loading="${priority?'eager':'lazy'}" decoding="async" ${priority?'fetchpriority="high"':''} ${source?`src="${esc(source)}"`:''} draggable="false"><span class="gym-loading">动作加载中</span>${ex.mediaNote?'<span class="gym-approx-label">示意</span>':''}</div>`;
   }
   async function loadGymIndex(force=false){if(force)gymIndexPromise=null;if(!gymIndexPromise)gymIndexPromise=fetch(GYM_DATA_URL,{cache:'force-cache'}).then(r=>r.ok?r.json():Promise.reject()).catch(()=>[]);return gymIndexPromise;}
   function norm(s=''){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
@@ -1341,31 +1354,14 @@
   async function gymRecord(ex){const saved=GYM_DIRECT[ex.id]||(NEW_EXERCISE_IDS.has(ex.id)?'':persistedGymMap[ex.id]);if(saved)return {gif_url:saved};if(NEW_EXERCISE_IDS.has(ex.id))return null;if(gymCache[ex.id])return gymCache[ex.id];try{const list=await loadGymIndex(),q=norm(GYM_QUERY[ex.id]||({胸:'barbell bench press',背:'cable lat pulldown',肩:'dumbbell lateral raise',腿:'barbell full squat',二头:'dumbbell biceps curl',三头:'cable pushdown',腹:'3/4 sit-up',小腿:'standing calf raise',有氧:'walk elliptical cross trainer'}[ex.group]||''));if(q){const rec=pickGymRecord(list,ex,q);if(rec?.gif_url){persistedGymMap[ex.id]=rec.gif_url;saveGymMap();gymCache[ex.id]=rec;return rec;}}}catch(err){console.warn('Gym Visual index load failed',err);}const fallback=GYM_GROUP_FALLBACK[ex.group]||GYM_GROUP_FALLBACK.肩;return {gif_url:fallback,fallback:true};}
   function attachGymSources(img,path){
     const rel=String(path||'').replace(/^\.\//,'');if(!rel)return;
-    const sources=rel.startsWith('assets/gym-visual/')?[`./${rel}`,`./${rel}?retry=1`]:[`${GYM_BASE}/${rel}`,`https://cdn.statically.io/gh/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`,`https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`];
+    const sources=gymSources(rel);
     let i=0;const shell=img.closest('.gym-media-shell');
     img.dataset.activePath=rel;img.classList.remove('no-media');shell?.classList.remove('failed');
     img.onload=()=>{if(img.dataset.activePath===rel)shell?.classList.add('loaded');};
     img.onerror=()=>{if(img.dataset.activePath!==rel)return;i++;if(i<sources.length)setTimeout(()=>{if(img.dataset.activePath===rel)img.src=sources[i];},180*i);else{img.classList.add('no-media');shell?.classList.add('failed');}};
-    const current=img.getAttribute('src')||'';
-    if(current&&current.includes(rel)){if(img.complete&&img.naturalWidth){shell?.classList.add('loaded');return;}if(!img.complete)return;img.removeAttribute('src');i=1;}
-    img.src=sources[Math.min(i,sources.length-1)];
-  }
-  function suspendGymImage(img){
-    if(img._gymSuspendTimer){clearTimeout(img._gymSuspendTimer);img._gymSuspendTimer=null;}
-    img.onload=null;img.onerror=null;img.dataset.activePath='';img.removeAttribute('src');
-    img.closest('.gym-media-shell')?.classList.remove('loaded');
-  }
-  function ensureGymObserver(){
-    if(gymVisibilityObserver||!('IntersectionObserver' in window))return gymVisibilityObserver;
-    gymVisibilityObserver=new IntersectionObserver(entries=>entries.forEach(({target:img,isIntersecting})=>{
-      img.dataset.gymVisible=isIntersecting?'1':'0';
-      if(isIntersecting){if(img._gymSuspendTimer)clearTimeout(img._gymSuspendTimer);img._gymSuspendTimer=null;const path=img.dataset.gymPath;if(path&&!img.getAttribute('src'))attachGymSources(img,path);}
-      else if(img.getAttribute('src')&&!img._gymSuspendTimer)img._gymSuspendTimer=setTimeout(()=>{img._gymSuspendTimer=null;if(img.dataset.gymVisible==='0')suspendGymImage(img);},800);
-    }),{root:null,rootMargin:'180px 0px',threshold:.01});
-    return gymVisibilityObserver;
-  }
-  function suspendGymVisuals(root=document){
-    root.querySelectorAll('img.gym-gif').forEach(img=>{gymVisibilityObserver?.unobserve(img);suspendGymImage(img);delete img.dataset.hydrated;});
+    const current=img.getAttribute('src')||'',sourceIndex=sources.indexOf(current);
+    if(sourceIndex>=0){if(img.complete&&img.naturalWidth){shell?.classList.add('loaded');return;}if(!img.complete)return;const rect=img.getBoundingClientRect();if(img.loading==='lazy'&&(rect.bottom< -400||rect.top>window.innerHeight+400))return;img.removeAttribute('src');i=sourceIndex+1;}
+    if(i<sources.length)img.src=sources[i];else{img.classList.add('no-media');shell?.classList.add('failed');}
   }
   async function hydrateGymVisuals(root=document,{force=false}={}){
     const imgs=[...root.querySelectorAll('img.gym-gif')].filter(img=>force||!img.dataset.hydrated);
@@ -1373,10 +1369,7 @@
       img.dataset.hydrated='1';const ex=exercise(img.dataset.gymId);let path=img.dataset.gymPath;
       if(!path){const rec=await gymRecord(ex);path=rec?.gif_url||rec?.video||rec?.gif||(rec?.media_id?`videos/${rec.media_id}.gif`:'');if(path)img.dataset.gymPath=path;}
       if(!path){img.closest('.gym-media-shell')?.classList.add('failed');return;}
-      if(img.dataset.gymPriority==='1'){attachGymSources(img,path);return;}
-      const observer=ensureGymObserver();
-      if(observer){observer.observe(img);const rect=img.getBoundingClientRect();if(rect.bottom>=-180&&rect.top<=window.innerHeight+180)attachGymSources(img,path);}
-      else attachGymSources(img,path);
+      attachGymSources(img,path);
     }));
   }
   function canonicalMuscles(text=''){
@@ -1547,7 +1540,6 @@
   function showTutorial(id){
     const ex=exercise(id);modal.classList.add('tutorial-mode');
     if(modal.open){resetModalScroll();modal.close();}
-    suspendGymVisuals(main);
     openModal(ex.name,`<div class="learn-stack"><section class="learn-card navy"><div class="learn-no blue">01</div><h2>3D 动图</h2><p class="learn-desc">${ex.mediaNote?esc(ex.mediaNote):'循环查看完整动作轨迹。'}</p><div class="learn-media white">${exerciseVisual(ex,{priority:true})}</div></section><section class="learn-card navy"><div class="learn-no blue">02</div><h2>视频讲解</h2><p class="learn-desc">短、直接，训练时快速复习动作重点。</p>${videoHTML(ex)}</section><section class="learn-card navy"><div class="learn-no blue">03</div><h2>动作要点</h2>${numberedList(ex.tips,'blue')}</section><section class="learn-card navy"><div class="learn-no orange">04</div><h2>常见错误</h2>${numberedList(ex.mistakes,'orange')}</section><section class="learn-card navy"><div class="learn-no orange">05</div><h2>训练肌群图</h2><p class="learn-desc">红色为主要训练肌群，橙色为辅助训练肌群。</p><div class="learn-media heat">${layeredMuscleMap(ex)}</div></section></div>`);
     resetTutorialScroll();
     hydrateGymVisuals(modalBody).finally(resetTutorialScroll);
@@ -1582,7 +1574,7 @@
       const ex=exercise(entry.exerciseId),known=GYM_DIRECT[entry.exerciseId]||(NEW_EXERCISE_IDS.has(entry.exerciseId)?'':persistedGymMap[entry.exerciseId])||'';
       const path=known||(await gymRecord(ex))?.gif_url||'';
       const rel=String(path).replace(/^\.\//,'');
-      const imageUrls=!rel?[]:/^https?:/.test(rel)?[rel]:rel.startsWith('assets/gym-visual/')?[`./${rel}`]:[`${GYM_BASE}/${rel}`,`https://cdn.statically.io/gh/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`,`https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/${GYM_SHA}/${rel}`];
+    const imageUrls=gymSources(rel);
       return {name:entry.customName||ex.name,sets:setSummary(entry.sets||[],ex)||'暂无已完成组',imageUrls};
     }));
     Promise.all([entriesPromise,window.TrainLogMuscleMap.getWorkoutSummary((w.exercises||[]).map(e=>e.exerciseId))]).then(([entries,summary])=>window.TrainLogReportImage.create({name:w.name,date:formatDateTime(w.endedAt),duration:durationText(new Date(w.endedAt)-new Date(w.startedAt)),sets:workingSets(w),volume:Math.round(totalVolume(w)),entries,summary})).then(blob=>{
