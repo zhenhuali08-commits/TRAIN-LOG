@@ -342,3 +342,4 @@ body{background:
 :root[data-theme="onyx"] .workout-report .report-brand strong,:root[data-theme="onyx"] .workout-report .report-heading h1,:root[data-theme="onyx"] .workout-report .report-content-head h2{color:#f4f6fa}
 :root[data-theme="onyx"] .workout-report .report-brand small,:root[data-theme="onyx"] .workout-report .report-content-head span{color:#c0cee0}
 :root[data-theme="onyx"] .workout-report-mode .modal-head .icon-btn,:root[data-theme="onyx"] .record-stats-mode .modal-head .icon-btn{background:#273241;color:#f0d49b}
+:root[data-theme="onyx"] .tabs{background:#253344;border:1px solid #40536a}
