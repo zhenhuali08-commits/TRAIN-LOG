@@ -318,3 +318,27 @@ body{background:
 :root[data-theme="onyx"] .stats-tile strong small,:root[data-theme="onyx"] .stats-chart-legend>div+div strong,:root[data-theme="onyx"] .stats-performance-top>span{color:#bec8d7}
 :root[data-theme="onyx"] .next-card strong,:root[data-theme="onyx"] .plan-card strong,:root[data-theme="onyx"] .tutorial-card strong,:root[data-theme="onyx"] .training-exercise-head strong{color:#f4f6fa}
 :root[data-theme="onyx"] .bottom-nav button.active{color:#f0d49b}
+:root[data-theme="onyx"] .chip.active,:root[data-theme="onyx"] .primary-btn,:root[data-theme="onyx"] .stats-picker-grid button.active,:root[data-theme="onyx"] .stats-week-option.active,:root[data-theme="onyx"] .record-month-grid button.active{background:linear-gradient(110deg,#b69459,#e0c58d);border-color:#c4a56b;color:#171b24}
+:root[data-theme="onyx"] .secondary-btn.neutral,:root[data-theme="onyx"] .record-month-panel,:root[data-theme="onyx"] .record-summary-grid>div,:root[data-theme="onyx"] .report-highlight,:root[data-theme="onyx"] .history-edit-exercise,:root[data-theme="onyx"] .diet-macro div{background:#273241;border-color:#425064;color:#eff2f7}
+:root[data-theme="onyx"] .record-year-tabs button,:root[data-theme="onyx"] .record-month-grid button:disabled{color:#aebccc}
+:root[data-theme="onyx"] .record-year-tabs button.active,:root[data-theme="onyx"] .record-month-grid button.available:not(.active){background:#343a3c;color:#edd39a}
+:root[data-theme="onyx"] .modal-head,:root[data-theme="onyx"] .modal-sheet:has(.exercise-picker-controls) .modal-head,:root[data-theme="onyx"] .exercise-picker-controls{background:#171e28;color:#f1f4f9}
+:root[data-theme="onyx"] .modal-title,:root[data-theme="onyx"] .empty strong,:root[data-theme="onyx"] .reorder-item strong{color:#f1f4f9}
+:root[data-theme="onyx"] .field select,:root[data-theme="onyx"] .field textarea,:root[data-theme="onyx"] .quick-form input,:root[data-theme="onyx"] .quick-lines textarea,:root[data-theme="onyx"] .history-edit-main input,:root[data-theme="onyx"] .history-edit-drop input,:root[data-theme="onyx"] .program-targets input{background:#273241;border-color:#425064;color:#f1f4f9}
+:root[data-theme="onyx"] .meal p,:root[data-theme="onyx"] .training-exercise-head small,:root[data-theme="onyx"] .plan-info small,:root[data-theme="onyx"] .next-info small,:root[data-theme="onyx"] .tutorial-card p{color:#afbdce}
+:root[data-theme="onyx"] .menu-action,:root[data-theme="onyx"] .action-popover,:root[data-theme="onyx"] .action-popover button,:root[data-theme="onyx"] .cal-cell{background:#273241;color:#f0f3f8}
+:root[data-theme="onyx"] .cal-cell.trained{background:#393827;color:#ecd297}
+:root[data-theme="onyx"] .cal-cell i{color:#171b24}
+:root[data-theme="onyx"] .gym-media-pending{background:#273241;color:#c2cbd7}
+:root[data-theme="onyx"] .stats-brand small,:root[data-theme="onyx"] .stats-title>span,:root[data-theme="onyx"] .stats-tile em,:root[data-theme="onyx"] .stats-chart-note,:root[data-theme="onyx"] .stats-footnote,:root[data-theme="onyx"] .stats-section-head>small,:root[data-theme="onyx"] .stats-muscle-groups small,:root[data-theme="onyx"] .stats-performance-row small,:root[data-theme="onyx"] .stats-chart-legend>div+div small{color:#b7c4d3}
+:root[data-theme="onyx"] .stats-report .report-tabs{background:#253344}
+:root[data-theme="onyx"] .stats-report .report-tabs button{color:#b9c6d5}
+:root[data-theme="onyx"] .stats-report .report-tabs button.active{background:#d6b777;color:#171b24}
+:root[data-theme="onyx"] .stats-picker-grid button,:root[data-theme="onyx"] .stats-week-option{background:#344153;color:#f0d49b}
+:root[data-theme="onyx"] .stats-picker-grid button:disabled,:root[data-theme="onyx"] .stats-week-option:disabled{background:#242e3b;color:#8d9caf}
+:root[data-theme="onyx"] .stats-line-chart text,:root[data-theme="onyx"] .stats-heat-legend,:root[data-theme="onyx"] .stats-performance-top>span{fill:#b7c4d3;color:#b7c4d3}
+:root[data-theme="onyx"] .stats-line-chart line{stroke:#465366}
+:root[data-theme="onyx"] .stats-menu button.active{color:#f0d49b}
+:root[data-theme="onyx"] .workout-report .report-brand strong,:root[data-theme="onyx"] .workout-report .report-heading h1,:root[data-theme="onyx"] .workout-report .report-content-head h2{color:#f4f6fa}
+:root[data-theme="onyx"] .workout-report .report-brand small,:root[data-theme="onyx"] .workout-report .report-content-head span{color:#c0cee0}
+:root[data-theme="onyx"] .workout-report-mode .modal-head .icon-btn,:root[data-theme="onyx"] .record-stats-mode .modal-head .icon-btn{background:#273241;color:#f0d49b}

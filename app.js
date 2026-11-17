@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.8.5';
+  const VERSION = '3.8.6';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -1162,7 +1162,7 @@
   function groupedExerciseLibraryHTML(list){if(!list.length)return '<div class="empty">没有找到这个动作</div>';return EXERCISE_GROUPS.filter(g=>g!=='全部').map(g=>{const items=list.filter(e=>e.group===g);return items.length?`<div class="exercise-group-heading">${g==='胸'?'胸部':g==='背'?'背部':g==='肩'?'肩部':g==='腿'?'腿部':g==='臀'?'臀部':g==='腹'?'腹部':g==='二头'?'肱二头':g==='三头'?'肱三头':g} · ${items.length} 个动作</div>${items.map(exerciseListItem).join('')}`:'';}).join('');}
   function exerciseListItem(e){ return `<button class="list-item tutorial-card" style="width:100%;text-align:left" data-tutorial="${e.id}"><div class="muscle-icon visual">${exerciseVisual(e)}</div><div class="grow"><strong>${esc(e.name)}</strong><p>${esc(e.primary)} · ${esc(e.equipment)}${e.type==='cardio'?' · min':''}</p></div><span class="pill blue">讲解</span></button>`; }
   function bindExerciseLibrary(){
-    document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const chipScrollLeft=b.parentElement.scrollLeft;const searchQuery=document.getElementById('exercise-search')?.value||'';activeExerciseFilter=b.dataset.filter;renderExercisesPage(chipScrollLeft,searchQuery);});
+    document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const chipScrollLeft=b.parentElement.scrollLeft;const searchQuery=document.getElementById('exercise-search')?.value||'';activeExerciseFilter=b.dataset.filter;renderExercisesPage(chipScrollLeft,searchQuery);window.scrollTo({top:0,behavior:'instant'});});
     document.querySelectorAll('[data-tutorial]').forEach(b=>b.onclick=()=>showTutorial(b.dataset.tutorial));
     const list=document.getElementById('exercise-list');hydrateGymVisuals(list);
     const s=document.getElementById('exercise-search'); if(s)s.oninput=()=>{ const q=s.value.trim().toLowerCase(); list.innerHTML=groupedExerciseLibraryHTML(allExercises().filter(e=>(activeExerciseFilter==='全部'||e.group===activeExerciseFilter)&&e.name.toLowerCase().includes(q))); document.querySelectorAll('[data-tutorial]').forEach(b=>b.onclick=()=>showTutorial(b.dataset.tutorial)); hydrateGymVisuals(list); };
