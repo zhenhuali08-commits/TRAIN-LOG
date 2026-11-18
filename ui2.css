@@ -347,3 +347,48 @@ body{background:
 :root[data-theme="onyx"] .workout-report-mode .modal-head .icon-btn,:root[data-theme="onyx"] .record-stats-mode .modal-head .icon-btn{background:#273241;color:#f0d49b}
 :root[data-theme="onyx"] .tabs{background:#253344;border:1px solid #40536a}
 .stats-muscle-region>i>b{background:#ef4444}
+
+/* Mine settings and food recommendations */
+.page-intro:has(.mine-tabs),.page-intro:has(.mine-settings-back){position:sticky}
+.mine-settings-entry,.mine-settings-back{position:absolute;top:18px;right:16px;display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:42px;padding:0 8px;border:1px solid var(--theme-primary-border);border-radius:13px;background:var(--theme-primary-soft);color:var(--theme-primary);box-shadow:0 4px 12px var(--theme-focus-ring)}
+.mine-settings-entry svg{width:26px;height:26px;display:block}
+.mine-settings-back{padding:0 12px;font-size:13px;font-weight:750;white-space:nowrap}
+.exercise-menu-btn svg{width:26px;height:26px}
+.diet-page{margin-top:14px}
+.diet-page .diet-tabs{margin-bottom:12px;border-radius:17px}
+.diet-page .diet-tabs .tab{height:39px}
+.diet-goal{padding:15px 13px 13px;border:1px solid #e3ebf7;border-radius:20px;background:linear-gradient(140deg,#fff,#f7fbff);box-shadow:var(--shadow)}
+.diet-goal-title{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--theme-primary-text)}
+.diet-goal-title strong{font-size:14px}.diet-goal-title span{font-size:11px;color:#8290a6}
+.diet-page .diet-macro{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:12px}
+.diet-page .diet-macro div{min-width:0;padding:9px 3px 8px;border:1px solid #e7edf6;border-radius:12px;background:#f2f7ff;text-align:center}
+.diet-page .diet-macro div>span{display:block;height:18px;color:var(--theme-primary);font-size:16px;line-height:18px}
+.diet-page .diet-macro strong{font-size:16px;line-height:1.4;color:#15233d}.diet-page .diet-macro small{font-size:10px;color:#728097}
+.diet-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:17px 1px 11px}
+.diet-section-head>strong{font-size:15px;color:#15233d}
+.diet-shuffle{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:85px;height:34px;padding:0 12px;border-radius:18px;background:linear-gradient(110deg,var(--theme-gradient-start),var(--theme-gradient-end));color:white;font-size:13px;font-weight:750;box-shadow:0 5px 14px var(--theme-focus-ring)}
+.diet-shuffle:first-letter{font-size:17px}.diet-shuffle span{white-space:nowrap}
+.diet-meal-list{display:grid;gap:9px}
+.diet-meal{padding:12px;border:1px solid #e4ebf5;border-radius:17px;background:#fff;box-shadow:var(--shadow)}
+.diet-meal-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px}
+.diet-meal-head strong{display:flex;align-items:center;gap:6px;font-size:13px;color:#17243a}
+.diet-meal-head strong span{color:var(--theme-primary);font-size:17px}.diet-meal-head small{color:#7d8ca3;font-size:11px;white-space:nowrap}
+.diet-food-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.diet-food{display:flex;align-items:center;gap:7px;min-width:0;min-height:62px;padding:5px;border:1px solid #eef1f6;border-radius:12px;background:#fbfcfe}
+.diet-food img{width:48px;height:48px;flex:none;object-fit:cover;border-radius:9px;background:#e9eef5}
+.diet-food>div{min-width:0}.diet-food strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11px;line-height:1.25;color:#1b2a40;overflow-wrap:anywhere}.diet-food small{display:block;margin-top:3px;color:#74839a;font-size:10px;white-space:nowrap}
+.diet-cheat-hero{position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-height:170px;padding:18px;border-radius:19px;overflow:hidden;color:#fff;background-image:linear-gradient(90deg,rgba(33,25,19,.78) 0%,rgba(33,25,19,.5) 58%,rgba(33,25,19,.06) 100%),var(--diet-hero);background-position:center;background-size:cover;box-shadow:var(--shadow)}
+.diet-cheat-hero>span{font-size:12px;font-weight:750}.diet-cheat-hero>strong{margin-top:5px;font-size:24px;line-height:1.15;text-shadow:0 1px 5px rgba(0,0,0,.3)}.diet-cheat-hero>small{margin-top:5px;font-size:11px}.diet-cheat-hero>em{align-self:flex-start;margin-top:9px;padding:5px 9px;border-radius:9px;background:rgba(255,255,255,.88);color:#9b4e19;font-style:normal;font-size:11px;font-weight:750}
+.diet-cheat-list{display:grid;gap:8px}
+.diet-cheat-item{display:flex;align-items:center;gap:9px;min-width:0;padding:8px;border:1px solid #e8edf4;border-radius:14px;background:#fff;box-shadow:var(--shadow)}
+.diet-cheat-photo{width:68px;height:58px;flex:none;border-radius:10px;object-fit:cover;background:#e9eef5}
+.diet-cheat-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}.diet-cheat-copy small{color:var(--theme-primary);font-size:10px;font-weight:750}.diet-cheat-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#17243a;font-size:12px}.diet-cheat-copy span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#77859a;font-size:10px;line-height:1.3}
+.diet-cheat-item>em{flex:none;max-width:78px;padding:5px 6px;border-radius:9px;background:var(--theme-primary-soft);color:var(--theme-primary-text);font-style:normal;font-size:10px;font-weight:700;text-align:center}
+.diet-note{margin-top:13px}
+@media(max-width:380px){.diet-page .diet-macro strong{font-size:14px}.diet-food img{width:42px;height:46px}.diet-food{gap:5px}.diet-food strong{font-size:10px}.diet-cheat-photo{width:59px}}
+:root[data-theme="onyx"] .mine-settings-entry,:root[data-theme="onyx"] .mine-settings-back{background:#343226;color:#f0d49b;border-color:#665a3f}
+:root[data-theme="onyx"] .diet-goal,:root[data-theme="onyx"] .diet-meal,:root[data-theme="onyx"] .diet-cheat-item{background:#202937;border-color:#394655;color:#f1f4f9}
+:root[data-theme="onyx"] .diet-page .diet-macro div,:root[data-theme="onyx"] .diet-food{background:#273241;border-color:#425064}
+:root[data-theme="onyx"] .diet-goal-title strong,:root[data-theme="onyx"] .diet-section-head>strong,:root[data-theme="onyx"] .diet-page .diet-macro strong,:root[data-theme="onyx"] .diet-meal-head strong,:root[data-theme="onyx"] .diet-food strong,:root[data-theme="onyx"] .diet-cheat-copy strong{color:#f1f4f9}
+:root[data-theme="onyx"] .diet-goal-title span,:root[data-theme="onyx"] .diet-page .diet-macro small,:root[data-theme="onyx"] .diet-meal-head small,:root[data-theme="onyx"] .diet-food small,:root[data-theme="onyx"] .diet-cheat-copy span{color:#adbacb}
+:root[data-theme="onyx"] .diet-shuffle{color:#171b24}

@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'train-log-state-v1';
-  const VERSION = '3.8.8';
+  const VERSION = '3.8.9';
   const DB_NAME = 'train-log-indexeddb';
   const DB_VERSION = 1;
   const DB_STORES = ['workouts','exercises','plans','body_metrics','settings','backup_meta'];
@@ -440,6 +440,8 @@
   let recordYear = null;
   let selectedRecordMonth = null;
   let dataTab = 'body';
+  let minePreviousTab = 'body';
+  const SETTINGS_ICON = '<svg viewBox="-28 -28 56 56" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><path d="M-6.2,-16.9 L-3.4,-17.7 L-4.2,-23.6 L4.2,-23.6 L3.4,-17.7 L6.2,-16.9 L7.6,-16.3 L10.1,-14.9 L13.8,-19.7 L19.7,-13.8 L14.9,-10.1 L16.3,-7.6 L16.9,-6.2 L17.7,-3.4 L23.6,-4.2 L23.6,4.2 L17.7,3.4 L16.9,6.2 L16.3,7.6 L14.9,10.1 L19.7,13.8 L13.8,19.7 L10.1,14.9 L7.6,16.3 L6.2,16.9 L3.4,17.7 L4.2,23.6 L-4.2,23.6 L-3.4,17.7 L-6.2,16.9 L-7.6,16.3 L-10.1,14.9 L-13.8,19.7 L-19.7,13.8 L-14.9,10.1 L-16.3,7.6 L-16.9,6.2 L-17.7,3.4 L-23.6,4.2 L-23.6,-4.2 L-17.7,-3.4 L-16.9,-6.2 L-16.3,-7.6 L-14.9,-10.1 L-19.7,-13.8 L-13.8,-19.7 L-10.1,-14.9 L-7.6,-16.3 Z"/><circle r="8.5"/></svg>';
   let dietBatch = 0;
   let dietMode = state.settings.dietMode || 'training';
   let pendingFreeWorkout=false;
@@ -1007,7 +1009,7 @@
   function trainingExerciseHTML(we,idx){
     const ex=exercise(we.exerciseId), prev=bestPreviousExercise(we.exerciseId,wId(state.activeWorkout)), cardio=ex.type==='cardio',timed=ex.metric==='sec';
     return `<section class="training-exercise" data-ex-index="${idx}">
-      <div class="training-exercise-head"><div class="exercise-thumb">${exerciseVisual(ex)}</div><div class="grow"><strong>${esc(ex.name)}</strong><small>${esc(ex.primary||ex.group)}${ex.rest?' · '+esc(ex.rest):''}</small>${prev?`<div class="last-result">上次：${esc(setSummary(prev.entry.sets,ex))}</div>`:''}</div><button class="exercise-menu-btn" data-ex-menu="${idx}" aria-label="动作菜单"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8 3.5-2.1-.8a6.3 6.3 0 0 0-.7-1.7l.9-2-2-2-2 .9a6.3 6.3 0 0 0-1.7-.7L12 3h-2.8l-.8 2.1a6.3 6.3 0 0 0-1.7.7l-2-.9-2 2 .9 2a6.3 6.3 0 0 0-.7 1.7L1 12v2.8l2.1.8c.2.6.4 1.2.7 1.7l-.9 2 2 2 2-.9c.5.3 1.1.6 1.7.7l.8 2.1H12l.8-2.1c.6-.2 1.2-.4 1.7-.7l2 .9 2-2-.9-2c.3-.5.6-1.1.7-1.7l2.1-.8V12Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button></div>
+      <div class="training-exercise-head"><div class="exercise-thumb">${exerciseVisual(ex)}</div><div class="grow"><strong>${esc(ex.name)}</strong><small>${esc(ex.primary||ex.group)}${ex.rest?' · '+esc(ex.rest):''}</small>${prev?`<div class="last-result">上次：${esc(setSummary(prev.entry.sets,ex))}</div>`:''}</div><button class="exercise-menu-btn" data-ex-menu="${idx}" aria-label="动作菜单">${SETTINGS_ICON}</button></div>
       <div class="set-head ${cardio||timed?'cardio':''}"><span>组</span>${cardio?'<span>min</span>':timed?'<span>秒</span>':'<span>kg</span><span>次数</span>'}<span>完成</span><span></span></div>
       <div class="set-rows">${we.sets.map((s,si)=>setRowHTML(ex,s,si)).join('')}</div>
       <div class="progression">${progressionMessage(we)}</div>
@@ -1058,13 +1060,15 @@
     if(!['body','strength','diet','settings'].includes(dataTab)) dataTab='body';
     const body=lastBody(), avg=sevenDayAvgWeight();
     main.innerHTML=`
-      ${pageIntro('我的','身体数据、力量趋势、饮食推荐和设置。',`<div class="tabs mine-tabs"><button class="tab ${dataTab==='body'?'active':''}" data-mine-tab="body">身体数据</button><button class="tab ${dataTab==='strength'?'active':''}" data-mine-tab="strength">力量趋势</button><button class="tab ${dataTab==='diet'?'active':''}" data-mine-tab="diet">饮食</button><button class="tab ${dataTab==='settings'?'active':''}" data-mine-tab="settings">设置</button></div>`)}
+      ${dataTab==='settings'?pageIntro('设置','训练偏好、主题颜色和数据备份。','<button class="mine-settings-back" type="button" id="mine-settings-back" aria-label="返回我的">‹ 返回我的</button>'):pageIntro('我的','身体数据、力量趋势和饮食推荐。',`<button class="mine-settings-entry" type="button" id="mine-settings-open" aria-label="打开设置">${SETTINGS_ICON}</button><div class="tabs mine-tabs"><button class="tab ${dataTab==='body'?'active':''}" data-mine-tab="body">身体数据</button><button class="tab ${dataTab==='strength'?'active':''}" data-mine-tab="strength">力量趋势</button><button class="tab ${dataTab==='diet'?'active':''}" data-mine-tab="diet">饮食</button></div>`)}
       <div id="mine-content"></div>`;
     document.querySelectorAll('[data-mine-tab]').forEach(b=>b.onclick=()=>{dataTab=b.dataset.mineTab;renderMine();});
+    document.getElementById('mine-settings-open')?.addEventListener('click',()=>{minePreviousTab=dataTab;dataTab='settings';renderMine();window.scrollTo({top:0,behavior:'instant'});});
+    document.getElementById('mine-settings-back')?.addEventListener('click',()=>{dataTab=minePreviousTab;renderMine();window.scrollTo({top:0,behavior:'instant'});});
     const c=document.getElementById('mine-content');
     if(dataTab==='body'){
       const trend=bodyTrend();
-      c.innerHTML=`<div class="grid2 equal-metrics"><div class="card metric-card"><small>最新体重</small><strong>${body?.weight?body.weight+' kg':'—'}</strong><div class="metric-delta">7 日平均 ${avg?avg+' kg':'—'}</div></div><div class="card metric-card"><small>腰围</small><strong>${body?.waist?body.waist+' cm':'—'}</strong><div class="metric-delta muted">每周固定条件记录</div></div></div>
+      c.innerHTML=`<div class="grid2 equal-metrics"><div class="card metric-card"><small>最新体重</small><strong>${body?.weight?body.weight+' kg':'—'}</strong><div class="metric-delta">7 日平均 ${avg?avg+' kg':'—'}</div></div><div class="card metric-card"><small>体脂率</small><strong>${body?.bodyFat!=null?body.bodyFat+'%':'—'}</strong><div class="metric-delta muted">主要看长期趋势</div></div></div>
       <section class="section"><div class="section-head"><div class="trend-select"><button class="section-title trend-title" type="button" data-cycle-body-trend aria-expanded="false" aria-label="切换身体趋势，当前为${trend.label}">${trend.label}<span aria-hidden="true">⌄</span></button><div class="stats-menu trend-menu" hidden>${BODY_TRENDS.map(item=>`<button type="button" data-body-trend="${item.key}" class="${item.key===trend.key?'active':''}">${item.label}<span>${item.key===trend.key?'●':''}</span></button>`).join('')}</div></div><button class="section-link" type="button" data-add-body>＋ 记录</button></div><div class="card"><div class="chart" id="body-trend-chart">${weightChart(trend.key)}</div></div></section>
       <section class="section"><div class="section-title" style="margin-bottom:10px">最近记录</div><div class="list">${[...state.bodyMetrics].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(m=>`<button class="list-item" style="width:100%;text-align:left" data-edit-body="${m.id}"><div class="grow"><strong>${formatDate(m.date)}</strong><small>${[m.bodyFat?`体脂 ${m.bodyFat}%`:null,m.skeletalMuscle?`骨骼肌 ${m.skeletalMuscle}kg`:null,m.waist?`腰围 ${m.waist}cm`:null].filter(Boolean).join(' · ')||'身体记录'}</small></div><strong>${m.weight?m.weight+' kg':'—'}</strong></button>`).join('')}</div></section>`;
       c.querySelector('[data-cycle-body-trend]').onclick=()=>{const menu=c.querySelector('.trend-menu');menu.hidden=!menu.hidden;c.querySelector('[data-cycle-body-trend]').setAttribute('aria-expanded',String(!menu.hidden));};
@@ -1073,7 +1077,9 @@
     } else if(dataTab==='strength'){
       const stats=strengthStats(); c.innerHTML=stats.length?`<div class="list">${stats.map(s=>`<button class="list-item" style="width:100%;text-align:left" data-strength="${s.id}"><div class="grow"><strong>${esc(s.name)}</strong><small>${s.sessions} 次训练记录</small></div><div class="strength-values"><strong>${s.bestWeight} kg</strong><small>最高重量</small><b>估算 1RM ${s.best1RM} kg</b></div></button>`).join('')}</div>`:'<div class="card empty">完成训练后自动生成力量趋势。</div>';document.querySelectorAll('[data-strength]').forEach(b=>b.onclick=()=>showStrength(b.dataset.strength));
     } else if(dataTab==='diet'){
-      c.innerHTML=`<div class="card"><div class="tabs diet-tabs"><button class="tab ${dietMode==='training'?'active':''}" data-diet="training">训练日</button><button class="tab ${dietMode==='rest'?'active':''}" data-diet="rest">休息日</button><button class="tab ${dietMode==='cheat'?'active':''}" data-diet="cheat">放纵餐</button></div>${dietHTML(dietMode)}</div>`;document.querySelectorAll('[data-diet]').forEach(b=>b.onclick=()=>{dietMode=b.dataset.diet;dietBatch=0;state.settings.dietMode=dietMode;saveState();renderMine();});document.getElementById('shuffle-diet').onclick=()=>{const size=dietMode==='cheat'?CHEAT_MENUS.length:(dietMode==='rest'?REST_DIET_MENUS.length:DIET_MENUS.length);dietBatch=(dietBatch+1)%size;renderMine();};
+      c.innerHTML=`<div class="diet-page"><div class="tabs diet-tabs"><button class="tab ${dietMode==='training'?'active':''}" data-diet="training">训练日</button><button class="tab ${dietMode==='rest'?'active':''}" data-diet="rest">休息日</button><button class="tab ${dietMode==='cheat'?'active':''}" data-diet="cheat">放纵餐</button></div><div id="diet-content">${dietHTML(dietMode)}</div></div>`;
+      document.querySelectorAll('[data-diet]').forEach(b=>b.onclick=()=>{dietMode=b.dataset.diet;dietBatch=0;state.settings.dietMode=dietMode;saveState();renderMine();});
+      const bindDietShuffle=()=>{document.getElementById('shuffle-diet').onclick=()=>{const size=dietMode==='cheat'?CHEAT_MENUS.length:(dietMode==='rest'?REST_DIET_MENUS.length:DIET_MENUS.length);dietBatch=(dietBatch+1)%size;document.getElementById('diet-content').innerHTML=dietHTML(dietMode);bindDietShuffle();};};bindDietShuffle();
     } else {
       const backup=backupStatus();c.innerHTML=`<section class="section"><div class="card"><div class="stat-row"><span>默认组间休息</span><button class="pill blue" id="rest-setting">${state.settings.restSeconds} 秒</button></div><div class="stat-row"><span>训练记录</span><strong>${state.workouts.length} 次</strong></div><div class="stat-row"><span>数据保存</span><strong>${storageFallback?'本机兼容存储':'IndexedDB'}</strong></div><div class="stat-row"><span>上次备份</span><strong>${backup.date}</strong></div><div class="stat-row backup-status-row ${backup.warning?'warning':''}"><span>备份状态</span><strong>${backup.text}</strong></div></div></section><div class="backup-grid"><button class="backup-action" id="export-btn">一键备份</button><button class="backup-action" id="import-btn">一键恢复</button></div><input id="import-file" type="file" accept="application/json,.json" hidden><div class="note ${backup.warning?'backup-reminder':''}" style="margin-top:12px">${backup.warning?'建议备份训练数据。':''} 数据保存在当前手机的 IndexedDB；换手机或清理浏览器数据后，可用 JSON 备份一键恢复。</div>`;c.querySelector('section.section').insertAdjacentHTML('afterend',themeSettingsHTML());document.querySelectorAll('[data-theme-option]').forEach(b=>b.onclick=()=>{if(state.settings.theme===b.dataset.themeOption)return;state.settings.theme=b.dataset.themeOption;applyTheme();document.querySelectorAll('[data-theme-option]').forEach(option=>{const selected=option.dataset.themeOption===state.settings.theme;option.classList.toggle('active',selected);option.setAttribute('aria-pressed',String(selected));});saveState();});document.getElementById('rest-setting').onclick=showRestSetting;document.getElementById('export-btn').onclick=exportData;document.getElementById('import-btn').onclick=()=>document.getElementById('import-file').click();document.getElementById('import-file').onchange=e=>importDataFile(e.target.files?.[0]);
     }
@@ -1143,16 +1149,230 @@
     {name:'长沙夜宵局',main:'口味虾 + 臭豆腐 + 糖油粑粑',side:'小炒黄牛肉 + 猪油拌粉',treat:'紫苏桃子姜'},
     {name:'甜品下午茶',main:'草莓奶油蛋糕 + 可颂三明治',side:'巴斯克芝士蛋糕 + 马卡龙',treat:'焦糖拿铁或厚乳奶茶'}
   ];
+  const FOOD_IMAGE_ROOT='./assets/food/';
+  const CURATED_FOOD_ROOT='./assets/food-curated/';
+  const CURATED_FOOD_OVERRIDES={chicken_rice:'chicken_rice',beef_rice:'beef_pepper_rice',fish_rice:'steamed_fish',shrimp_rice:'shrimp_fried_rice',chicken_pasta:'chicken_pasta',burger:'cheeseburger',korean_bbq:'korean_bbq',sushi:'sushi',dimsum:'dimsum',skewers:'lamb_skewers',roast_duck:'peking_duck',thai_seafood:'tom_yum',tacos:'tacos',ramen:'ramen',beef_noodles:'beef_noodles',salmon_rice:'salmon_bowl',tofu_rice:'tofu_rice',egg_sandwich:'egg_toast'};
+  const CHEAT_ROW_PHOTOS={
+    '重庆火锅局':'hotpot_beef|hotpot_veg|bingfen',
+    '炸鸡汉堡快乐餐':'fried_chicken|corn|milk',
+    '披萨意面组合':'@chicken_pasta|salad|cheesecake',
+    '韩式烤肉大餐':'@beef_teriyaki|plain_rice|yogurt',
+    '日式烧肉寿司':'@salmon_bowl|fried_chicken|bingfen',
+    '川湘下饭菜':'dapanji|salad|bingfen',
+    '广式茶点畅吃':'char_siu|@beef_noodles|cheesecake',
+    '东北烧烤夜宵':'ribs|hotpot_veg|milk',
+    '经典西餐大餐':'@steak_pasta|mashed_potato|cheesecake',
+    '港式烧味甜品':'@peking_duck|curry|yogurt',
+    '潮汕牛肉火锅':'hotpot_beef|plain_rice|coffee',
+    '北京烤鸭宴':'char_siu|@chicken_congee|cheesecake',
+    '新疆大盘鸡':'@chicken_rice|@lamb_skewers|yogurt',
+    '云南菌子锅':'@beef_pepper_rice|@tofu_rice|bingfen',
+    '贵州酸汤鱼':'steamed_fish|hotpot_veg|bingfen',
+    '海南椰子鸡':'hainan_chicken|plain_rice|bingfen',
+    '泰式海鲜盛宴':'curry|@shrimp_fried_rice|milk',
+    '越南街头风味':'@lamb_skewers|chicken_wrap|coffee',
+    '新加坡南洋餐':'@shrimp_rice|@shrimp_noodles|cheesecake',
+    '马来西亚肉骨茶':'@beef_stew|plain_rice|coffee',
+    '印度咖喱大餐':'@lamb_chops|plain_rice|yogurt',
+    '墨西哥塔可派对':'chicken_wrap|corn|cheesecake',
+    '美式烟熏烧烤':'@beef_stew|cheese|apple',
+    '德式烤猪肘':'@lamb_skewers|mashed_potato|cheesecake',
+    '西班牙海鲜饭':'@shrimp_rice|@shrimp_fried_rice|cheesecake',
+    '法式小酒馆':'@beef_stew|whole_wheat_bread|cheesecake',
+    '意式肉酱盛宴':'pizza|@shrimp_rice|cheesecake',
+    '土耳其烤肉拼盘':'@beef_pepper_rice|chicken_wrap|yogurt',
+    '希腊海边餐':'@paella|salad|yogurt',
+    '俄式暖胃餐':'@beef_stew|@chicken_congee|cheesecake',
+    '大阪街头小吃':'oyster_omelette|@lamb_skewers|bingfen',
+    '日式拉面套餐':'boiled_eggs|fried_chicken|bingfen',
+    '日式咖喱炸物':'fried_chicken|salad|bingfen',
+    '韩式部队锅':'@beef_noodles|oyster_omelette|bingfen',
+    '韩式炸鸡双拼':'@korean_wings|@tofu_rice|bingfen',
+    '湘西烧烤小龙虾':'@lamb_skewers|ribs|soy_milk',
+    '江浙本帮菜':'@shrimp_rice|@beef_noodles|bingfen',
+    '南京鸭血粉丝':'@shrimp_noodles|@peking_duck|cheesecake',
+    '武汉过早组合':'@tofu_rice|@chicken_congee|soy_milk',
+    '西安碳水盛宴':'@beef_noodles|@lamb_skewers|bingfen',
+    '兰州牛肉面':'boiled_eggs|@lamb_chops|milk',
+    '河南烩面水席':'@shrimp_noodles|fried_chicken|soy_milk',
+    '山东鲁菜硬菜':'steamed_fish|@shrimp_rice|pumpkin',
+    '福建海味宴':'@paella|@beef_noodles|bingfen',
+    '台湾夜市套餐':'@beef_pepper_rice|fried_chicken|milk',
+    '澳门葡式风味':'curry|@tofu_rice|cheesecake',
+    '成都串串香':'@lamb_skewers|hotpot_veg|bingfen',
+    '螺蛳粉加满料':'boiled_eggs|ribs|soy_milk',
+    '长沙夜宵局':'crayfish|spicy_beef|banana',
+    '甜品下午茶':'@egg_toast|@yogurt_blueberry|coffee'
+  };
+  function foodAsset(id){return id?.startsWith('@')?CURATED_FOOD_ROOT+id.slice(1)+'.webp':FOOD_IMAGE_ROOT+id+'.webp';}
+  function foodPhoto(text,used){
+    const exact=[
+      [/^苹果$/,['apple']],[/奇异果/,['kiwi']],[/蓝莓/,['blueberry']],[/^香蕉$/,['banana','@oatmeal_banana']],
+      [/土豆泥/,['mashed_potato']],[/小份土豆/,['mashed_potato','pumpkin']],
+      [/菠菜菌菇|菌菇青菜|瘦肉炒菌菇/,['spinach_mushroom','salad']],
+      [/西兰花胡萝卜|^西兰花$|^菜花$/,['broccoli','salad']],
+      [/鸡胸肉生菜三明治/,['chicken_wrap','@egg_toast']],
+      [/鸡胸肉沙拉/,['chicken_salad','@chicken_broccoli']],
+      [/三文鱼沙拉/,['salmon_salad','@salmon_bowl']],
+      [/虾仁鸡蛋面/,['@shrimp_noodles']],
+      [/燕麦鸡蛋饼/,['@egg_toast','oatmeal']],
+      [/冬瓜排骨汤/,['@beef_stew','congee']],
+      [/冬瓜虾仁汤|虾仁冬瓜汤/,['shrimp_soup']],
+      [/番茄牛肉汤/,['tomato_beef_soup']],
+      [/虾仁蒸蛋/,['shrimp_steamed_egg']],
+      [/^鸡蛋2个$|^水煮蛋2个$|^水煮蛋$|^鸡蛋$|蒸蛋/,['boiled_eggs','@egg_toast']],
+      [/燕麦|麦片/,['oatmeal','@oatmeal_banana']],
+      [/希腊酸奶水果碗|酸奶|一份水果/,['yogurt','@yogurt_blueberry']],
+      [/全麦面包/,['whole_wheat_bread']],
+      [/全麦吐司鸡蛋三明治|贝果|花生酱吐司/,['@egg_toast','@peanut_banana_toast']],
+      [/乳清蛋白/,['whey_shake']],[/牛奶/,['milk','soy_milk']],[/豆浆/,['soy_milk','milk']],
+      [/咖啡|无糖茶/,['coffee']],[/坚果/,['nuts']],[/玉米/,['corn']],[/紫薯|南瓜/,['pumpkin','mashed_potato']],
+      [/低脂奶酪/,['cheese']],[/小番茄/,['tomato']],[/毛豆/,['edamame']],[/^饭团$/,['onigiri']],
+      [/三文鱼杂粮饭/,['@salmon_bowl']],
+      [/牛肉蔬菜卷饼|牛肉蔬菜卷|鸡胸肉蔬菜卷/,['chicken_wrap','@tacos']],
+      [/鸡腿肉炒彩椒/,['@chicken_broccoli','@chicken_rice']],
+      [/米饭|杂粮饭|糙米饭/,['plain_rice','@tofu_rice']],
+      [/菠菜|青菜|生菜|菜心|时蔬|蔬菜|彩椒|芦笋|菌菇|沙拉|黄瓜/,['salad','greek_salad','hotpot_veg','spinach_mushroom','broccoli']],
+      [/清蒸鱼|清蒸鲈鱼/,['steamed_fish']],[/三文鱼/,['@salmon_bowl','steamed_fish']],
+      [/虾仁炒蛋|虾仁滑蛋饭|清炒虾仁|白灼虾|虾仁豆腐煲/,['@shrimp_rice','@shrimp_fried_rice','@paella']],
+      [/鸡胸肉意面/,['@chicken_pasta']],[/牛肉荞麦面|番茄鸡蛋牛肉面/,['@beef_noodles']],
+      [/鸡胸肉荞麦面/,['@shrimp_noodles','@chicken_pasta']],
+      [/咖喱鸡肉饭/,['@chicken_curry']],[/鸡腿肉藜麦饭/,['@chicken_rice']],
+      [/鸡丝粥/,['@chicken_congee','congee']],
+      [/牛排/,['steak','@beef_pepper_rice']],
+      [/牛肉|牛腩|牛柳/,['@beef_pepper_rice','@beef_stew','@beef_teriyaki']],
+      [/豆腐/,['@tofu_rice']],[/白切鸡/,['hainan_chicken']],
+      [/鸡腿|鸡胸|滑鸡|鸡肉/,['@chicken_rice','@chicken_broccoli','@chicken_curry']]
+    ];
+    const candidates=exact.find(([pattern])=>pattern.test(text))?.[1];
+    if(candidates){
+      const paths=candidates.map(id=>id.startsWith('@')?CURATED_FOOD_ROOT+id.slice(1)+'.webp':FOOD_IMAGE_ROOT+id+'.webp');
+      const chosen=paths.find(path=>!used?.has(path))||paths[0];used?.add(chosen);return chosen;
+    }
+    const rules=[
+      [/海南椰子鸡/, 'hotpot'],
+      [/新加坡南洋|海南鸡饭|白切鸡/, 'hainan_chicken'],
+      [/鸡肉卷|鸡胸肉蔬菜卷|牛肉蔬菜卷饼|卷饼|沙威玛/, 'chicken_wrap'],
+      [/鸡腿肉炒|香煎鸡腿肉|黑椒鸡腿饭|照烧鸡胸饭|香菇滑鸡饭/, 'chicken_rice'],
+      [/日式拉面|豚骨叉烧拉面/, 'ramen'],
+      [/美式烟熏烧烤/, 'ribs'],
+      [/法式小酒馆/, 'steak'],
+      [/港式烧味|叉烧/, 'char_siu'],
+      [/越南街头|越南河粉/, 'pho'],
+      [/肉骨茶/, 'bak_kut_teh'],
+      [/意式肉酱|千层面/, 'lasagna'],
+      [/希腊海边|希腊沙拉/, 'greek_salad'],
+      [/俄式暖胃|俄式炖牛肉/, 'stroganoff'],
+      [/江浙本帮|红烧肉/, 'braised_pork'],
+      [/武汉过早|热干面/, 'hot_dry_noodles'],
+      [/西安碳水|肉夹馍/, 'roujiamo'],
+      [/山东鲁菜|糖醋鲤鱼/, 'sweet_sour_fish'],
+      [/福建海味|海蛎煎/, 'oyster_omelette'],
+      [/台湾夜市|大鸡排/, 'taiwan_chicken'],
+      [/澳门葡式|葡国鸡|非洲鸡/, 'macau_chicken'],
+      [/成都串串|牛肉串串/, 'chuanchuan'],
+      [/螺蛳粉/, 'luosifen'],
+      [/长沙夜宵|臭豆腐/, 'stinky_tofu'],
+      [/甜品下午茶|芝士蛋糕/, 'cheesecake'],
+      [/日式烧肉寿司/, 'sushi'],
+      [/冰粉|糍粑|甜品|蛋糕|冰淇淋|奶茶|布丁|大福|糖藕|饮品/, 'bingfen'],
+      [/重庆|潮汕|火锅|锅底|肥牛卷|牛油锅|酸汤鱼|菌子锅|椰子鸡锅|部队锅/, 'hotpot'],
+      [/毛肚|肥牛|嫩牛肉|牛肉片/, 'hotpot_beef'],
+      [/土豆片|贡菜|豆皮|菌菇拼盘/, 'hotpot_veg'],
+      [/贡菜|豆皮|菌菇|青菜|蔬菜|生菜|菠菜|西兰花|芦笋|沙拉|彩椒/, 'salad'],
+      [/燕麦|麦片/, 'oatmeal'],
+      [/酸奶|蓝莓|水果碗/, 'yogurt'],
+      [/香蕉|苹果|水果/, 'banana'],
+      [/鸡蛋2个|水煮蛋|蒸蛋/, 'boiled_eggs'],
+      [/豆浆|豆奶/, 'soy_milk'],
+      [/牛奶|乳清蛋白/, 'milk'],
+      [/黑咖啡|无糖茶/, 'coffee'],
+      [/饭团/, 'onigiri'],
+      [/杂粮饭|糙米饭|半碗米饭|小份米饭|^米饭$/, 'plain_rice'],
+      [/玉米/, 'corn'],
+      [/坚果/, 'nuts'],
+      [/紫薯|南瓜/, 'pumpkin'],
+      [/鸡丝粥/, 'congee'],
+      [/低脂奶酪/, 'cheese'],
+      [/小番茄/, 'tomato'],
+      [/毛豆/, 'edamame'],
+      [/菜心|时蔬|黄瓜|菜花/, 'salad'],
+      [/鸡蛋|吐司|三明治|贝果|全麦面包/, 'egg_sandwich'],
+      [/小龙虾/, 'crayfish'],
+      [/海鲜饭/, 'paella'],
+      [/烤鸭|烧鸭|盐水鸭/, 'roast_duck'],
+      [/汉堡|牛肉堡|薯条/, 'burger'],
+      [/炸鸡|鸡翅|鸡块/, 'fried_chicken'],
+      [/披萨/, 'pizza'],
+      [/韩式烤肉|五花肉|烧肉/, 'korean_bbq'],
+      [/寿司|大阪|章鱼烧/, 'sushi'],
+      [/川湘|水煮牛肉|辣子鸡|小炒黄牛肉|麻辣/, 'spicy_beef'],
+      [/茶点|虾饺|烧卖|叉烧包/, 'dimsum'],
+      [/烧烤|羊肉串|牛肉串|烤肉/, 'skewers'],
+      [/牛排|西餐|羊排|鸭胸/, 'steak'],
+      [/大盘鸡/, 'dapanji'],
+      [/泰式|冬阴功|咖喱蟹|海鲜锅/, 'thai_seafood'],
+      [/塔可|墨西哥/, 'tacos'],
+      [/烟熏|猪肋排|烤猪肘|烤排骨/, 'ribs'],
+      [/拉面|豚骨|荞麦面|牛肉面|粉丝|米线|热干面|烩面|河粉/, 'beef_noodles'],
+      [/咖喱/, 'curry'],
+      [/三文鱼/, 'salmon_rice'],
+      [/清蒸鱼|鲈鱼|蒸鱼/, 'steamed_fish'],
+      [/虾仁|白灼虾|海鲜|鱿鱼/, 'shrimp_rice'],
+      [/鸡肉意面|牛柳意面|意面|千层面/, 'chicken_pasta'],
+      [/牛肉|牛腩|牛柳|牛肉饭/, 'beef_rice'],
+      [/鸡肉卷|鸡胸肉蔬菜卷|卷饼|沙威玛/, 'chicken_wrap'],
+      [/豆腐/, 'tofu_rice'],
+      [/鸡腿|鸡胸|滑鸡|鸡肉|白切鸡/, 'chicken_rice'],
+      [/鱼/, 'fish_rice']
+    ];
+    const id=rules.find(([pattern])=>pattern.test(text))?.[1]||'chicken_rice';
+    return CURATED_FOOD_OVERRIDES[id]?CURATED_FOOD_ROOT+CURATED_FOOD_OVERRIDES[id]+'.webp':FOOD_IMAGE_ROOT+id+'.webp';
+  }
+  function foodKcal(text){
+    if(/鸡蛋2个|水煮蛋2个/.test(text))return 155;
+    if(/^鸡蛋$|^水煮蛋$/.test(text))return 78;
+    if(/香蕉/.test(text))return 110;
+    if(/苹果/.test(text))return 95;
+    if(/蓝莓/.test(text))return 57;
+    if(/奇异果/.test(text))return 60;
+    if(/一份水果/.test(text))return 90;
+    if(/燕麦|麦片/.test(text))return 315;
+    if(/乳清/.test(text))return 120;
+    if(/豆浆/.test(text))return 100;
+    if(/酸奶|牛奶/.test(text))return 165;
+    if(/咖啡|无糖茶/.test(text))return 5;
+    if(/坚果/.test(text))return 160;
+    if(/半碗米饭/.test(text))return 120;
+    if(/小份米饭/.test(text))return 160;
+    if(/^米饭$|杂粮饭|糙米饭/.test(text))return 240;
+    if(/玉米/.test(text))return 120;
+    if(/三明治|卷饼|卷|贝果|吐司|全麦面包|饭团/.test(text))return 250;
+    if(/蔬菜|青菜|西兰花|生菜|沙拉|菌菇/.test(text))return 180;
+    if(/饭|意面|荞麦面|牛肉面|鸡蛋面/.test(text))return 530;
+    if(/牛肉|牛腩|牛排|鸡肉|鸡胸|鸡腿|三文鱼|鱼|虾仁/.test(text))return 360;
+    return 190;
+  }
+  function foodImage(text,cls='',loading='lazy',source=''){
+    return `<img class="${cls}" src="${source||foodPhoto(text)}" alt="${esc(text)}" loading="${loading}" decoding="async">`;
+  }
   function dietHTML(mode){
     if(mode==='cheat'){
       const menu=CHEAT_MENUS[dietBatch%CHEAT_MENUS.length];
-      return `<div class="small muted">今天想吃点好的</div><div class="cheat-hero"><span>本次推荐</span><strong>${esc(menu.name)}</strong></div><div class="section-head" style="margin-top:18px"><strong>具体放纵餐推荐</strong><button class="section-link" id="shuffle-diet">换一批</button></div>${[['主角',menu.main],['搭配',menu.side],['甜品/饮品',menu.treat]].map(([n,t])=>`<div class="meal"><strong>${n}</strong><p>${esc(t)}</p></div>`).join('')}<div class="note" style="margin-top:12px">放纵餐按一顿来享受就好，挑自己真正想吃的，不需要为了“补偿”额外挨饿或疯狂加练。</div>`;
+      const heroPhoto=window.TRAIN_LOG_FOOD_IMAGES?.cheats?.[menu.name]||foodPhoto(menu.name);
+      const rowPhotos=CHEAT_ROW_PHOTOS[menu.name]?.split('|');
+      return `<div class="diet-cheat-hero" style="--diet-hero:url('${heroPhoto}')"><span>🔥 今日推荐</span><strong>${esc(menu.name)}</strong><small>${esc(menu.main.split('+')[0].trim())} · 释放压力</small><em>预估热量 ≈ ${dietBatch===0?'2800':'2200–3000'} kcal</em></div>
+        <div class="diet-section-head"><strong>🍴 放纵餐推荐</strong><button class="diet-shuffle" id="shuffle-diet" type="button" aria-label="换一批放纵餐">⟳ <span>换一批</span></button></div>
+        <div class="diet-cheat-list">${[['主角',menu.main],['搭配',menu.side],['甜品/饮品',menu.treat]].map(([label,text],i)=>`<div class="diet-cheat-item">${foodImage(text,'diet-cheat-photo',i===0?'eager':'lazy',rowPhotos?.[i]?foodAsset(rowPhotos[i]):'')}<div class="diet-cheat-copy"><small>${label}</small><strong>${esc(text.split('+')[0].trim())}</strong><span>${esc(text)}</span></div><em>约 ${[1800,400,600][i]} kcal</em></div>`).join('')}</div>
+        <div class="note diet-note">💡 放纵餐按一顿来享受就好。选择真正想吃的食物，不需要额外挨饿或加练。热量为常见份量估算。</div>`;
     }
     const d=DIET[mode],menus=mode==='rest'?REST_DIET_MENUS:DIET_MENUS,menu=menus[dietBatch%menus.length];
-    return `<div class="small muted">${d.label}目标</div><div class="diet-macro"><div><strong>${d.kcal}</strong><small>kcal</small></div><div><strong>${d.protein}g</strong><small>蛋白质</small></div><div><strong>${d.fat}g</strong><small>脂肪</small></div><div><strong>${d.carbs}g</strong><small>碳水</small></div></div>
-      <div class="section-head" style="margin-top:18px"><strong>今日具体饮食推荐</strong><button class="section-link" id="shuffle-diet">换一批</button></div>
-      ${[['早餐',menu.breakfast],['午餐',menu.lunch],['训练前/加餐',menu.snack],['晚餐',menu.dinner]].map(([n,t])=>`<div class="meal"><strong>${n}</strong><p>${t}</p></div>`).join('')}
-      <div class="note" style="margin-top:12px">按当前计划保持蛋白质约 150g/天。训练日碳水更高以支持训练表现；休息日适度降低碳水。份量以你的总热量目标为准，可按体重、腰围和训练表现每两周调整。</div>`;
+    const rows=[['☀','早餐',menu.breakfast],['🍴','午餐',menu.lunch],['✚',mode==='rest'?'下午加餐':'训练前/加餐',menu.snack],['☾','晚餐',menu.dinner]];
+    const usedPhotos=new Set();
+    return `<div class="diet-goal"><div class="diet-goal-title"><strong>◎ ${d.label}营养目标</strong><span>按日参考</span></div><div class="diet-macro"><div><span>♨</span><strong>${d.kcal}</strong><small>kcal</small></div><div><span>♧</span><strong>${d.protein}g</strong><small>蛋白质</small></div><div><span>♢</span><strong>${d.fat}g</strong><small>脂肪</small></div><div><span>♧</span><strong>${d.carbs}g</strong><small>碳水</small></div></div></div>
+      <div class="diet-section-head"><strong>🍴 今日饮食推荐</strong><button class="diet-shuffle" id="shuffle-diet" type="button" aria-label="换一批饮食推荐">⟳ <span>换一批</span></button></div>
+      <div class="diet-meal-list">${rows.map(([icon,label,text])=>{const items=text.split('+').map(s=>s.trim()).filter(Boolean);const sum=items.reduce((n,item)=>n+foodKcal(item),0);return `<section class="diet-meal"><div class="diet-meal-head"><strong><span aria-hidden="true">${icon}</span>${label}</strong><small>约 ${sum} kcal</small></div><div class="diet-food-grid">${items.map((item,i)=>`<div class="diet-food">${foodImage(item,'',i===0?'eager':'lazy',foodPhoto(item,usedPhotos))}<div><strong>${esc(item)}</strong><small>约 ${foodKcal(item)} kcal</small></div></div>`).join('')}</div></section>`;}).join('')}</div>
+      <div class="note diet-note">${mode==='rest'?'休息日保持蛋白质摄入，适度降低碳水。':'训练日保证足量蛋白质和碳水，支持训练与恢复。'} 图片仅展示主要食材；热量按常见份量估算，以实际用量为准。</div>`;
   }
 
   function exerciseLibraryFiltersHTML(){
